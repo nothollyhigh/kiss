@@ -392,6 +392,8 @@ func main() {
 
 ### http server
 
+- http只是简单支持优雅退出，实际路由等请使用标准库或其他第三方包
+
 ```golang
 package main
 
