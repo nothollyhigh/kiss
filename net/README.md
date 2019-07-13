@@ -10,8 +10,8 @@
 	- [kiss ws echo server](#kiss-ws-echo-server)
 	- [kiss ws echo client](#kiss-ws-echo-client)
 - [Rpc Echo](#rpc-echo)
-	- [rpc echo server](#rpc-echo-server)
-	- [rpc echo client](#rpc-echo-client)
+	- [rpc echo server](#rpc-server)
+	- [rpc echo client](#rpc-client)
 - [Http Echo](#http-echo)
 	- [http server](#http-server)
 
