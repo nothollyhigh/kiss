@@ -427,11 +427,19 @@ func (engine *TcpEngin) initRpcHandler() {
 }
 
 // setting handle rpc method
-func (engine *TcpEngin) HandleRpcMethod(method string, handler func(ctx *RpcContext), async bool) {
+func (engine *TcpEngin) HandleRpcMethod(method string, handler func(ctx *RpcContext), args ...interface{}) {
 	engine.initRpcHandler()
 	if _, ok := engine.rpcMethodHandlers[method]; ok {
 		panic(fmt.Errorf("HandleRpcMethod failed: handler for method %v exists", method))
 	}
+
+	async := false
+	if len(args) > 0 {
+		if a, ok := args[0].(bool); ok {
+			async = a
+		}
+	}
+
 	if async {
 		engine.rpcMethodHandlers[method] = func(ctx *RpcContext) {
 			util.Go(func() {

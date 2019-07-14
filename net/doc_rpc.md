@@ -62,29 +62,40 @@ type HelloResponse struct {
 }
 
 // Hello方法
-func onHello(ctx *net.RpcContext) {
+func Hello(ctx *net.RpcContext) {
 	req := &HelloRequest{}
 
 	err := ctx.Bind(req)
 	if err != nil {
-		log.Error("onHello failed: %v", err)
+		log.Error("Hello failed: %v", err)
 		return
 	}
 
-	err = ctx.Write(&HelloResponse{Message: req.Message})
-	if err != nil {
-		log.Error("onHello failed: %v", err)
-		return
-	}
+	// 直接回包
+	// err = ctx.Write(&HelloResponse{Message: req.Message})
+	// if err != nil {
+	// 	log.Error("Hello failed: %v", err)
+	// 	return
+	// }
+	// log.Info("HelloRequest: %v", req.Message)
 
-	log.Info("HelloRequest: %v", req.Message)
+	// 支持异步回包
+	go func() {
+		err = ctx.Write(&HelloResponse{Message: req.Message})
+		if err != nil {
+			log.Error("Hello failed: %v", err)
+			return
+		}
+
+		log.Info("HelloRequest: %v", req.Message)
+	}()
 }
 
 func main() {
 	server := net.NewRpcServer("Rpc")
 
 	// 初始化方法，类似http初始化路由
-	server.HandleRpcMethod("Hello", onHello, true)
+	server.HandleRpcMethod("Hello", Hello)
 
 	// 启动服务
 	server.Serve(addr, time.Second*5)
