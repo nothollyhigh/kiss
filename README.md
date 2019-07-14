@@ -20,14 +20,15 @@
 
 ## KISS可以用来做什么？
 
-- KISS只做基础组件，不做框架，组件不限于项目类型
+- 有的人喜欢"框架"这个词，KISS的定位是提供一些基础组件方便搭积木实现架构方案，组件不限于项目类型
 
-- 作者主要从事游戏和web服务器开发，常用来构建游戏服务器：
+- 作者主要从事游戏和web服务器开发，常用来构建游戏服务器，一些示例：
 
 > 1. [单进程服务器示例](https://github.com/nothollyhigh/hellokiss)
 
-> 2. 集群是不同功能服务的拆分和实现，每个游戏的需求都可能不一样，请根据实际需求自行设计和实现
+> 2. [kissgate网关](https://github.com/nothollyhigh/kissgate)，支持kiss格式的tcp/websocket连接反向代理到tcp服务，支持线路检测、负载均衡、realip等，常用来做游戏集群的网关，kiss协议格式详见 [net包](https://github.com/nothollyhigh/kiss/blob/master/net/README.md)
 
+> 3. 集群是不同功能服务的拆分和实现，每个游戏的需求都可能不一样，请根据实际需求自行设计和实现
 
 ## KISS组件包简介
 
