@@ -5,7 +5,7 @@
 2. 通知式：无需应答，方向上可以分为 client->server 和 server->client
 
 
-## RPC（Remote Procedure Call）的本质
+## 传统 RPC（Remote Procedure Call）的特点
 
 - 通常的rpc是单向的（client->server）、阻塞方式调用
 
@@ -18,7 +18,7 @@
 - 通常的rpc服务端实现，方法返回即调用结束，不支持异步返回
 
 
-## KISS 的 RPC
+## KISS RPC 的特点
 
 - 支持client单向阻塞方式调用，也支持server向client发送通知
 
