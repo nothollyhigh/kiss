@@ -10,6 +10,7 @@
 	- [kiss ws echo server](#kiss-ws-echo-server)
 	- [kiss ws echo client](#kiss-ws-echo-client)
 - [Rpc Echo](#rpc-echo)
+	- [rpc doc](https://github.com/nothollyhigh/kiss/blob/master/net/doc_rpc.md)
 	- [rpc echo server](#rpc-server)
 	- [rpc echo client](#rpc-client)
 - [Http Echo](#http-echo)
