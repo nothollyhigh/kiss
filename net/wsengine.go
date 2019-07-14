@@ -182,15 +182,16 @@ func (engine *WSEngine) HandleNewCipher(newCipher func() ICipher) {
 // handle message
 func (engine *WSEngine) onMessage(cli *WSClient, msg IMessage) {
 	if engine.shutdown {
-		switch msg.Cmd() {
-		case CmdPing:
-		case CmdSetReaIp:
-		case CmdRpcMethod:
-		case CmdRpcError:
-		default:
-			log.Debug("engine is not running, ignore cmd %X, ip: %v", msg.Cmd(), cli.Ip())
-			return
-		}
+		// switch msg.Cmd() {
+		// case CmdPing:
+		// case CmdSetReaIp:
+		// case CmdRpcMethod:
+		// case CmdRpcError:
+		// default:
+		// 	log.Debug("engine is not running, ignore cmd %X, ip: %v", msg.Cmd(), cli.Ip())
+		// 	return
+		// }
+		return
 	}
 
 	if engine.messageHandler != nil {

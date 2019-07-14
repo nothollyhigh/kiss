@@ -300,15 +300,16 @@ func (engine *TcpEngin) HandleSend(sender func(client *TcpClient, data []byte) e
 
 func (engine *TcpEngin) OnMessage(client *TcpClient, msg IMessage) {
 	if !engine.running {
-		switch msg.Cmd() {
-		case CmdPing:
-		case CmdSetReaIp:
-		case CmdRpcMethod:
-		case CmdRpcError:
-		default:
-			log.Debug("engine is not running, ignore cmd %X, ip: %v", msg.Cmd(), client.Ip())
-			return
-		}
+		// switch msg.Cmd() {
+		// case CmdPing:
+		// case CmdSetReaIp:
+		// case CmdRpcMethod:
+		// case CmdRpcError:
+		// default:
+		// 	log.Debug("engine is not running, ignore cmd %X, ip: %v", msg.Cmd(), client.Ip())
+		// 	return
+		// }
+		return
 	}
 
 	if engine.onMsgHandler != nil {
@@ -333,7 +334,7 @@ func (engine *TcpEngin) OnMessage(client *TcpClient, msg IMessage) {
 }
 
 // setting message handler
-func (engine *TcpEngin) HandleOnMessage(onMsg func(client *TcpClient, msg IMessage)) {
+func (engine *TcpEngin) HandleMessage(onMsg func(client *TcpClient, msg IMessage)) {
 	engine.onMsgHandler = onMsg
 }
 

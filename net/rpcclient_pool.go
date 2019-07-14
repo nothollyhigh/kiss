@@ -44,7 +44,7 @@ func NewRpcClientPool(addr string, engine *TcpEngin, codec ICodec, poolSize int,
 	}
 
 	clients := map[*TcpClient]*RpcClient{}
-	engine.HandleOnMessage(func(c *TcpClient, msg IMessage) {
+	engine.HandleMessage(func(c *TcpClient, msg IMessage) {
 		switch msg.Cmd() {
 		case CmdPing:
 		case CmdRpcMethod:
