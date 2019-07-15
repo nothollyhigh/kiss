@@ -8,15 +8,16 @@ import (
 	"github.com/nothollyhigh/kiss/log"
 	"io"
 	"os"
+	"time"
 )
 
 func main() {
 	fileWriter := &log.FileWriter{
-		RootDir:     "./logs/",            //日志根目录，每次启动新建目录则可以 "./logs/" + time.Now().Format("20060102150405") + "/"
-		DirFormat:   "200601021504/",      //按时间格式分割日志文件子目录，""则不拆分子目录；此处测试按分钟
-		FileFormat:  "20060102150405.log", //按时间格式切割日志文件，此处测试按秒
-		MaxFileSize: 1024 * 256,           //按最大size切割日志文件
-		EnableBufio: false,                //是否启用bufio，重要日志建议不开启
+		RootDir:     "./logs/" + time.Now().Format("20060102150405/"), //日志根目录，每次启动新建目录
+		DirFormat:   "200601021504/",                                  //按时间格式分割日志文件子目录，""则不拆分子目录；此处测试按分钟
+		FileFormat:  "20060102150405.log",                             //按时间格式切割日志文件，此处测试按秒
+		MaxFileSize: 1024 * 256,                                       //按最大size切割日志文件
+		EnableBufio: false,                                            //是否启用bufio，重要日志建议不开启
 	}
 
 	out := io.MultiWriter(os.Stdout, fileWriter)
