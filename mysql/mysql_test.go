@@ -30,7 +30,7 @@ func testInitMysql() {
 	if !testMysqlInited {
 		testMysqlInited = true
 
-		dbMysql = NewMysql(MysqlConf{
+		dbMysql = New(Config{
 			ConnString:        testMysqlDBConn,
 			PoolSize:          10,
 			KeepaliveInterval: 2, //300

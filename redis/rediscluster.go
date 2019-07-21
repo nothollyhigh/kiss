@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-type RedisClusterConf struct {
+type ClusterConfig struct {
 	Addrs    []string `json:"Addrs"`
 	Password string   `json:"Password"`
 	// Database           int      `json:"Database"`
@@ -124,7 +124,7 @@ func (rds *RedisCluster) Close() error {
 	return rds.client.Close()
 }
 
-func NewRedisCluster(conf RedisClusterConf) *RedisCluster {
+func NewCluster(conf ClusterConfig) *RedisCluster {
 	if conf.DialTimeout > 0 {
 		conf.dialTimeout = time.Second * time.Duration(conf.DialTimeout)
 	} else {
@@ -203,47 +203,3 @@ func NewRedisCluster(conf RedisClusterConf) *RedisCluster {
 		ticker:  ticker,
 	}
 }
-
-// type RedisClusterMgrConf struct {
-// 	Platforms map[string][]RedisClusterConf
-// }
-
-// type RedisMgr struct {
-// 	instances map[string][]*Redis
-// }
-
-// func (mgr *RedisMgr) GetRedis(platform string, idx int) *Redis {
-// 	pool, ok := mgr.instances[platform]
-// 	if !ok {
-// 		return nil
-// 	}
-// 	return pool[uint32(idx)%uint32(len(pool))]
-// }
-
-// func (mgr *RedisMgr) ForEach(cb func(*Redis)) {
-// 	for _, pool := range mgr.instances {
-// 		for _, rds := range pool {
-// 			cb(rds)
-// 		}
-// 	}
-// }
-
-// func NewRedisMgr(mgrConf RedisMgrConf) *RedisMgr {
-// 	mgr := &RedisMgr{
-// 		instances: map[string][]*Redis{},
-// 	}
-
-// 	total := 0
-// 	for platform, confs := range mgrConf.Platforms {
-// 		for _, conf := range confs {
-// 			mgr.instances[platform] = append(mgr.instances[platform], NewRedis(conf))
-// 			total++
-// 		}
-// 	}
-
-// 	if total == 0 {
-// 		panic("invalid RedisMgrConf, 0 config")
-// 	}
-
-// 	return mgr
-// }

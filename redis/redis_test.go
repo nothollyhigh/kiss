@@ -6,13 +6,13 @@ import (
 )
 
 func TestRedis(t *testing.T) {
-	conf := RedisConf{
+	conf := Config{
 		Addr:              "127.0.0.1:6379",
 		Database:          0,
 		PoolSize:          10,
 		KeepaliveInterval: 2, //300
 	}
-	dbRedis := NewRedis(conf)
+	dbRedis := New(conf)
 
 	wg := sync.WaitGroup{}
 	for i := 0; i < 10; i++ {

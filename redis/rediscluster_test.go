@@ -6,12 +6,12 @@ import (
 )
 
 func TestRedisCluster(t *testing.T) {
-	conf := RedisClusterConf{
+	conf := ClusterConfig{
 		Addrs:             []string{"127.0.0.1:6379"},
 		PoolSize:          10,
 		KeepaliveInterval: 2, //300
 	}
-	dbRedis := NewRedisCluster(conf)
+	dbRedis := NewCluster(conf)
 
 	wg := sync.WaitGroup{}
 	for i := 0; i < 10; i++ {

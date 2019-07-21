@@ -3,7 +3,7 @@ package mongo
 import (
 	"fmt"
 	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	//"gopkg.in/mgo.v2/bson"
 	"sync"
 	"testing"
 	"time"
@@ -22,7 +22,7 @@ func testInitMongo() {
 	if !testMongoInited {
 		testMongoInited = true
 
-		dbMongo = NewMongo(MongoConf{
+		dbMongo = New(Config{
 			//ConnString:        testMongoDBConn,
 			Addrs:             []string{"127.0.0.1:27017"},
 			Database:          "admin",

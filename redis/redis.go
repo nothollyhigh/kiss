@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-type RedisConf struct {
+type Config struct {
 	ID                 string `json:"ID"`
 	Addr               string `json:"Addr"`
 	Password           string `json:"Password"`
@@ -39,20 +39,6 @@ type RedisConf struct {
 	idleCheckFrequency time.Duration
 }
 
-// type RedisConfArr []RedisConf
-
-// func (arr RedisConfArr) Len() int {
-// 	return len(arr)
-// }
-
-// func (arr RedisConfArr) Swap(i, j int) {
-// 	arr[i], arr[j] = arr[j], arr[i]
-// }
-
-// func (arr RedisConfArr) Less(i, j int) bool {
-// 	return arr[i].ID > arr[j].ID
-// }
-
 type redisScript struct {
 	sync.Mutex
 	tag  string
@@ -66,7 +52,7 @@ type Redis struct {
 	client  *redis.Client
 	ticker  *time.Ticker
 	scripts map[string]*redisScript
-	Conf    RedisConf
+	Conf    Config
 }
 
 func (rds *Redis) Client() *redis.Client {
@@ -151,7 +137,7 @@ func (rds *Redis) Close() error {
 	return rds.client.Close()
 }
 
-func NewRedis(conf RedisConf) *Redis {
+func New(conf Config) *Redis {
 	if conf.DialTimeout > 0 {
 		conf.dialTimeout = time.Second * time.Duration(conf.DialTimeout)
 	} else {
@@ -188,7 +174,7 @@ func NewRedis(conf RedisConf) *Redis {
 		conf.keepaliveInterval = time.Second * 300
 	}
 
-	log.Info("NewRedis Connect To Redis ...")
+	log.Info("redis.New Connect To Redis ...")
 
 	client := redis.NewClient(&redis.Options{
 		Network:            conf.Network,
@@ -208,7 +194,7 @@ func NewRedis(conf RedisConf) *Redis {
 	})
 	cmd := client.Ping()
 	if cmd.Err() != nil {
-		log.Fatal("NewRedis client.Ping() Failed: %v", cmd.Err())
+		log.Fatal("redis.New client.Ping() Failed: %v", cmd.Err())
 	}
 
 	ticker := time.NewTicker(conf.keepaliveInterval)
@@ -223,7 +209,7 @@ func NewRedis(conf RedisConf) *Redis {
 		}
 	})
 
-	log.Info("NewRedis Connect To Redis Success")
+	log.Info("redis.New Connect To Redis Success")
 
 	return &Redis{
 		client:  client,
@@ -233,7 +219,7 @@ func NewRedis(conf RedisConf) *Redis {
 	}
 }
 
-type RedisMgrConf map[string][]RedisConf
+type MgrConfig map[string][]Config
 
 type RedisMgr struct {
 	instances map[string][]*Redis
@@ -263,7 +249,7 @@ func (mgr *RedisMgr) ForEach(cb func(string, int, *Redis)) {
 	}
 }
 
-func NewRedisMgr(mgrConf RedisMgrConf) *RedisMgr {
+func NewMgr(mgrConf MgrConfig) *RedisMgr {
 	mgr := &RedisMgr{
 		instances: map[string][]*Redis{},
 	}
@@ -274,14 +260,14 @@ func NewRedisMgr(mgrConf RedisMgrConf) *RedisMgr {
 			return confs[i].ID > confs[j].ID
 		})
 		for _, conf := range confs {
-			mgr.instances[tag] = append(mgr.instances[tag], NewRedis(conf))
+			mgr.instances[tag] = append(mgr.instances[tag], New(conf))
 			total++
 		}
 
 	}
 
 	if total == 0 {
-		panic("invalid RedisMgrConf, 0 config")
+		panic("invalid MgrConfig, 0 config")
 	}
 
 	return mgr

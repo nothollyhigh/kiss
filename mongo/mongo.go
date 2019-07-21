@@ -12,7 +12,7 @@ import (
 
 const defaultPoolSize = 10
 
-type MongoConf struct {
+type Config struct {
 	Addrs    []string `json:"Addrs"`
 	Username string   `json:"Username"`
 	Password string   `json:"Password"`
@@ -35,7 +35,7 @@ type MongoSessionWrap struct {
 	tmp    *mgo.Session
 }
 
-func (wrap *MongoSessionWrap) init(conf MongoConf) {
+func (wrap *MongoSessionWrap) init(conf Config) {
 	if conf.Safe != nil {
 		wrap.SetSafe(conf.Safe)
 	}
@@ -64,7 +64,7 @@ func (wrap *MongoSessionWrap) ping() error {
 }
 
 type Mongo struct {
-	Conf      MongoConf
+	Conf      Config
 	ticker    *time.Ticker
 	chSession chan *MongoSessionWrap
 	sessions  []*MongoSessionWrap
@@ -99,8 +99,8 @@ func (m *Mongo) EnsureIndex(dbname string, cname string, keys []string) {
 	}
 }
 
-func NewMongo(conf MongoConf) *Mongo {
-	log.Info("NewMongo Connect To Mongo ...")
+func New(conf Config) *Mongo {
+	log.Info("mongo.New Connect To Mongo ...")
 	if conf.DialTimeout > 0 {
 		conf.dialTimeout = time.Second * time.Duration(conf.DialTimeout)
 	} else {
@@ -131,12 +131,12 @@ func NewMongo(conf MongoConf) *Mongo {
 	session, err := mgo.DialWithInfo(&dialInfo)
 	//session, err := mgo.DialWithTimeout(conf.ConnString, conf.dialTimeout)
 	if err != nil {
-		log.Fatal("NewMongo mgo.DialWithTimeout failed: %v", err)
+		log.Fatal("mongo.New mgo.DialWithTimeout failed: %v", err)
 	}
 
 	err = session.Ping()
 	if err != nil {
-		log.Fatal("NewMongo failed: %v", err)
+		log.Fatal("mongo.New failed: %v", err)
 	}
 
 	mongo := &Mongo{Conf: conf, ticker: time.NewTicker(conf.keepaliveInterval), chSession: make(chan *MongoSessionWrap, conf.PoolSize)}
@@ -177,7 +177,7 @@ func NewMongo(conf MongoConf) *Mongo {
 	// 	}
 	// })
 
-	log.Info("NewMongo(pool size: %d) Connect To Mongo Success", len(mongo.sessions))
+	log.Info("mongo.New(pool size: %d) Connect To Mongo Success", len(mongo.sessions))
 
 	return mongo
 }

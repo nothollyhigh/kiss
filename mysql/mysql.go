@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-type MysqlConf struct {
+type Config struct {
 	ID                string `json:"ID"`
 	ConnString        string `json:"ConnString"` //user:password@tcp(localhost:5555)/dbname
 	EncryptKey        string `json:"EncryptKey"`
@@ -24,7 +24,7 @@ type MysqlConf struct {
 type Mysql struct {
 	db     *gorm.DB
 	ticker *time.Ticker
-	Conf   MysqlConf
+	Conf   Config
 }
 
 func (msql *Mysql) OrmDB() *gorm.DB {
@@ -39,9 +39,9 @@ func (msql *Mysql) Close() error {
 	return msql.db.Close()
 }
 
-func NewMysql(conf MysqlConf) *Mysql {
+func New(conf Config) *Mysql {
 	if conf.ConnString == "" {
-		log.Fatal("NewMysql Failed: invalid ConnString")
+		log.Fatal("msyql.New Failed: invalid ConnString")
 	}
 
 	if conf.KeepaliveInterval > 0 {
@@ -50,17 +50,17 @@ func NewMysql(conf MysqlConf) *Mysql {
 		conf.keepaliveInterval = time.Second * 300
 	}
 
-	log.Info("NewMysql Connect To Mysql ...")
+	log.Info("msyql.New Connect To Mysql ...")
 
 	// db, err := sql.Open("mysql", conf.ConnString)
 	db, err := gorm.Open("mysql", conf.ConnString)
 	if err != nil {
-		log.Fatal("NewMysql sql.Open Failed: %v", err)
+		log.Fatal("msyql.New sql.Open Failed: %v", err)
 	}
 
 	err = db.DB().Ping()
 	if err != nil {
-		log.Fatal("NewMysql Ping() Failed: %v", err)
+		log.Fatal("msyql.New Ping() Failed: %v", err)
 	}
 
 	if conf.PoolSize > 0 {
@@ -83,12 +83,12 @@ func NewMysql(conf MysqlConf) *Mysql {
 		}
 	})
 
-	log.Info("NewMysql Connect To Mysql Success")
+	log.Info("msyql.New Connect To Mysql Success")
 
 	return msql
 }
 
-type MysqlMgrConf map[string][]MysqlConf
+type MgrConfig map[string][]Config
 
 type MysqlMgr struct {
 	instances map[string][]*Mysql
@@ -118,7 +118,7 @@ func (mgr *MysqlMgr) ForEach(cb func(string, int, *Mysql)) {
 	}
 }
 
-func NewMysqlMgr(mgrConf MysqlMgrConf) *MysqlMgr {
+func NewMgr(mgrConf MgrConfig) *MysqlMgr {
 	mgr := &MysqlMgr{
 		instances: map[string][]*Mysql{},
 	}
@@ -129,14 +129,14 @@ func NewMysqlMgr(mgrConf MysqlMgrConf) *MysqlMgr {
 			return confs[i].ID > confs[j].ID
 		})
 		for _, conf := range confs {
-			mgr.instances[tag] = append(mgr.instances[tag], NewMysql(conf))
+			mgr.instances[tag] = append(mgr.instances[tag], New(conf))
 			total++
 		}
 
 	}
 
 	if total == 0 {
-		panic("invalid MysqlMgrConf, 0 config")
+		panic("invalid MgrConfig, 0 config")
 	}
 
 	return mgr
