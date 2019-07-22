@@ -88,44 +88,6 @@ func (c *Workers) Go(h func(), to time.Duration) error {
 	return nil
 }
 
-func (c *Workers) GoWait(h func()) error {
-	if !c.running {
-		return ErrWorkersStopped
-	}
-	c.Add(1)
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	c.ch <- workerTask{wg, h}
-	wg.Wait()
-	return nil
-}
-
-// func (c *Workers) GoWait(h func()) error {
-// 	if !c.running {
-// 		return ErrWorkersStopped
-// 	}
-// 	c.Add(1)
-
-// 	wg := &sync.WaitGroup{}
-// 	wg.Add(1)
-
-// 	if to > 0 {
-// 		select {
-// 		case c.ch <- workerTask{wg, h}:
-// 		case <-time.After(to):
-// 			c.Done()
-// 			wg.Done()
-// 			return ErrWorkersTimeout
-// 		}
-// 	} else {
-// 		c.ch <- workerTask{wg, h}
-// 	}
-
-// 	wg.Wait()
-
-// 	return nil
-// }
-
 func (c *Workers) Stop() {
 	c.running = false
 	close(c.ch)
@@ -214,38 +176,6 @@ func (c *WorkersLink) Go(h func(task *LinkTask)) error {
 	c.ch <- task
 	return nil
 }
-
-// func (c *WorkersLink) GoWithTimeout(h func(task *LinkTask), to time.Duration) error {
-// 	if !c.running {
-// 		return ErrWorkersStopped
-// 	}
-// 	c.Add(1)
-// 	c.Lock()
-// 	defer c.Unlock()
-
-// 	var task *LinkTask
-// 	if c.pre != nil {
-// 		task = &LinkTask{
-// 			caller: h,
-// 			pre:    c.pre.ch,
-// 			ch:     make(chan interface{}),
-// 		}
-// 	} else {
-// 		task = &LinkTask{
-// 			caller: h,
-// 			ch:     make(chan interface{}),
-// 		}
-// 	}
-
-// 	select {
-// 	case c.ch <- task:
-// 		c.pre = task
-// 	case <-time.After(to):
-// 		c.Done()
-// 		return ErrWorkersTimeout
-// 	}
-// 	return nil
-// }
 
 func (c *WorkersLink) Stop() {
 	c.running = false
