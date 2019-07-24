@@ -46,7 +46,7 @@ func NewRpcClientPool(addr string, engine *TcpEngin, codec ICodec, poolSize int,
 	clients := map[*TcpClient]*RpcClient{}
 	engine.HandleMessage(func(c *TcpClient, msg IMessage) {
 		switch msg.Cmd() {
-		case CmdPing:
+		case CmdPing2:
 		case CmdRpcMethod:
 			rpcclient := clients[c]
 			rpcclient.Lock()
