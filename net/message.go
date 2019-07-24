@@ -40,15 +40,21 @@ const (
 
 	// reserved cmd: ping
 	CmdPing = uint32(0x1 << 24)
+	// reserved cmd: ping2
+	CmdPing2 = uint32(0x1<<24 + 1)
 	// reserved cmd: set real ip
-	CmdSetReaIp = uint32(0x1<<24 + 1)
+	CmdSetReaIp = uint32(0x1<<24 + 2)
 	// reserved cmd: rpc method
-	CmdRpcMethod = uint32(0x1<<24 + 2)
+	CmdRpcMethod = uint32(0x1<<24 + 3)
 	// reserved cmd: rpc error
-	CmdRpcError = uint32(0x1<<24 + 3)
+	CmdRpcError = uint32(0x1<<24 + 4)
 
 	// max user space cmd
 	CmdUserMax = uint32(0xFFFFFF)
+)
+
+var (
+	ping2Msg = NewMessage(CmdPing2, []byte{})
 )
 
 // message interface
