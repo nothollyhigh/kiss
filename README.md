@@ -26,9 +26,10 @@
 
 > 1. [单进程服务器示例](https://github.com/nothollyhigh/hellokiss)
 
-> 2. [kissgate网关](https://github.com/nothollyhigh/kissgate)，支持kiss格式的tcp/websocket连接反向代理到tcp服务，支持线路检测、负载均衡、realip等，常用来做游戏集群的网关，kiss协议格式详见 [net包](https://github.com/nothollyhigh/kiss/blob/master/net/README.md)
+> 2. [简单服务器集群示例](https://github.com/nothollyhigh/kisscluster)，另：集群是不同功能服务的拆分和实现，每个游戏的需求都可能不一样，请根据实际需求自行设计和实现
 
-> 3. 集群是不同功能服务的拆分和实现，每个游戏的需求都可能不一样，请根据实际需求自行设计和实现
+> 3. [kissgate网关](https://github.com/nothollyhigh/kissgate)，支持kiss格式的tcp/websocket连接反向代理到tcp服务，支持线路检测、负载均衡、realip等，常用来做游戏集群的网关，kiss协议格式详见 [net包](https://github.com/nothollyhigh/kiss/blob/master/net/README.md)
+
 
 ## KISS组件包简介
 
