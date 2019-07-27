@@ -29,6 +29,9 @@ type WSEngine struct {
 	// 发送队列容量
 	SendQSize int
 
+	// websocket消息类型
+	MessageType int
+
 	// shutdown flag
 	shutdown bool
 
@@ -107,7 +110,7 @@ func (engine *WSEngine) Send(cli *WSClient, data []byte) error {
 		}
 	}
 
-	err = cli.Conn.WriteMessage(websocket.TextMessage, data)
+	err = cli.Conn.WriteMessage(engine.MessageType, data)
 	if err != nil {
 		log.Debug("%s Send Write Err: %v", cli.Conn.RemoteAddr().String(), err)
 		cli.Stop()
@@ -226,6 +229,7 @@ func NewWebsocketEngine() *WSEngine {
 		WriteTimeout: DefaultWriteTimeout,
 		ReadLimit:    DefaultReadLimit,
 		SendQSize:    DefaultSendQSize,
+		MessageType:  websocket.TextMessage,
 		shutdown:     false,
 		handlers: map[uint32]func(*WSClient, IMessage){
 			CmdSetReaIp: func(cli *WSClient, msg IMessage) {
