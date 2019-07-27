@@ -16,7 +16,8 @@ var (
 	ErrRpcCallTimeout           = errors.New("rpc call timeout")
 	ErrRpcCallClientError       = errors.New("rpc client error")
 
-	ErrorRpcInvalidPbMessage = errors.New("invalid pb Message")
+	ErrorRpcInvalidMessageHeadLen = errors.New("invalid Message Head Len")
+	ErrorRpcInvalidPbMessage      = errors.New("invalid pb Message")
 
 	ErrorBroadcastNotEnabled = errors.New("broadcast not enabled")
 
