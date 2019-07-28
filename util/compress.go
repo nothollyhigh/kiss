@@ -17,7 +17,10 @@ func ZlibCompress(data []byte) []byte {
 
 func ZlibUnCompress(data []byte) ([]byte, error) {
 	b := bytes.NewReader(data)
-	r, _ := zlib.NewReader(b)
+	r, err := zlib.NewReader(b)
+	if err != nil {
+		return nil, err
+	}
 	defer r.Close()
 	undatas, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -36,7 +39,10 @@ func GZipCompress(data []byte) []byte {
 
 func GZipUnCompress(data []byte) ([]byte, error) {
 	b := bytes.NewReader(data)
-	r, _ := gzip.NewReader(b)
+	r, err := gzip.NewReader(b)
+	if err != nil {
+		return nil, err
+	}
 	defer r.Close()
 	undatas, err := ioutil.ReadAll(r)
 	if err != nil {
