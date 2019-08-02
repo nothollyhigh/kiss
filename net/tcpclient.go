@@ -13,7 +13,7 @@ import (
 
 // tcp client
 type TcpClient struct {
-	sync.Mutex
+	sync.RWMutex
 
 	// tcp connection
 	Conn *net.TCPConn
@@ -379,7 +379,10 @@ func (client *TcpClient) Shutdown() error {
 
 // send async message
 func (client *TcpClient) send(amsg *asyncMessage) error {
-	if !client.running {
+	client.RLock()
+	running := client.running
+	client.RUnlock()
+	if !running {
 		return ErrTcpClientIsStopped
 	}
 	defer util.HandlePanic()
