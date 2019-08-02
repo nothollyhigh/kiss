@@ -93,7 +93,11 @@ func (cli *WSClient) Keepalive(interval time.Duration) {
 	for {
 		<-ticker.C
 
-		if !cli.running {
+		cli.Lock()
+		running := cli.running
+		cli.Unlock()
+
+		if !running {
 			return
 		}
 

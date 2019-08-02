@@ -299,7 +299,11 @@ func (client *TcpClient) Keepalive(interval time.Duration) {
 	for {
 		<-ticker.C
 
-		if client.shutdown {
+		client.Lock()
+		shutdown := client.shutdown
+		client.Unlock()
+
+		if shutdown {
 			return
 		}
 		client.SendMsg(msg)
