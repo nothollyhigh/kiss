@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -60,7 +61,7 @@ func (cli *WSClient) readloop() {
 		if imsg = cli.WSEngine.RecvMsg(cli); imsg == nil {
 			break
 		}
-		cli.recvSeq++
+		atomic.AddInt64(&cli.recvSeq, 1)
 		cli.WSEngine.onMessage(cli, imsg)
 	}
 }
@@ -80,7 +81,7 @@ func (cli *WSClient) writeloop() {
 			break
 		}
 
-		cli.sendSeq++
+		atomic.AddInt64(&cli.sendSeq, 1)
 	}
 }
 
@@ -102,12 +103,12 @@ func (cli *WSClient) Keepalive(interval time.Duration) {
 
 // receive sequence
 func (cli *WSClient) RecvSeq() int64 {
-	return cli.recvSeq
+	return atomic.LoadInt64(&cli.recvSeq)
 }
 
 // send sequence
 func (cli *WSClient) SendSeq() int64 {
-	return cli.sendSeq
+	return atomic.LoadInt64(&cli.sendSeq)
 }
 
 // receive key

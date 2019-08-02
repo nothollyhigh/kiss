@@ -269,6 +269,8 @@ func (engine *TcpEngin) HandleSendQueueFull(h func(*TcpClient, interface{})) {
 
 // tcp client send data
 func (engine *TcpEngin) Send(client *TcpClient, data []byte) error {
+	defer util.HandlePanic()
+
 	if engine.sendHandler != nil {
 		return engine.sendHandler(client, data)
 	}

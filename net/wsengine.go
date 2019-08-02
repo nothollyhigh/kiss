@@ -95,6 +95,8 @@ func (engine *WSEngine) RecvMsg(cli *WSClient) IMessage {
 
 // send websocket data
 func (engine *WSEngine) Send(cli *WSClient, data []byte) error {
+	defer util.HandlePanic()
+
 	if engine.sendHandler != nil {
 		return engine.sendHandler(cli, data)
 	}

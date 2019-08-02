@@ -378,23 +378,24 @@ func (client *TcpClient) Shutdown() error {
 }
 
 // send async message
-func (client *TcpClient) send(amsg *asyncMessage) error {
-	client.RLock()
-	running := client.running
-	client.RUnlock()
-	if !running {
-		return ErrTcpClientIsStopped
-	}
-	defer util.HandlePanic()
-	return client.parent.Send(client, amsg.data)
-}
+// func (client *TcpClient) send(amsg *asyncMessage) error {
+// 	client.RLock()
+// 	running := client.running
+// 	client.RUnlock()
+// 	if !running {
+// 		return ErrTcpClientIsStopped
+// 	}
+// 	defer util.HandlePanic()
+// 	return client.parent.Send(client, amsg.data)
+// }
 
 func (client *TcpClient) writeloop() {
 	defer client.Stop()
 
 	var err error = nil
 	for asyncMsg := range client.chSend {
-		err = client.send(&asyncMsg)
+		// err = client.send(&asyncMsg)
+		err = client.parent.Send(client, asyncMsg.data)
 		if asyncMsg.cb != nil {
 			asyncMsg.cb(client, err)
 		}
