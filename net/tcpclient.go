@@ -1,13 +1,13 @@
 package net
 
 import (
+	"github.com/nothollyhigh/kiss/log"
+	"github.com/nothollyhigh/kiss/util"
 	"net"
 	"strconv"
 	"strings"
 	"sync"
-	//"sync/atomic"
-	"github.com/nothollyhigh/kiss/log"
-	"github.com/nothollyhigh/kiss/util"
+	"sync/atomic"
 	"time"
 )
 
@@ -247,12 +247,12 @@ func (client *TcpClient) pushDataSync(data []byte) error {
 
 // receive sequence
 func (client *TcpClient) RecvSeq() int64 {
-	return client.recvSeq
+	return atomic.LoadInt64(&client.recvSeq)
 }
 
 // send sequence
 func (client *TcpClient) SendSeq() int64 {
-	return client.sendSeq
+	return atomic.LoadInt64(&client.sendSeq)
 }
 
 // receive key
@@ -398,7 +398,7 @@ func (client *TcpClient) writeloop() {
 		if err != nil {
 			break
 		}
-		client.sendSeq++
+		atomic.AddInt64(&client.sendSeq, 1)
 	}
 }
 
@@ -410,7 +410,7 @@ func (client *TcpClient) readloop() {
 		if imsg = client.parent.RecvMsg(client); imsg == nil {
 			break
 		}
-		client.recvSeq++
+		atomic.AddInt64(&client.recvSeq, 1)
 		client.parent.OnMessage(client, imsg)
 	}
 }
