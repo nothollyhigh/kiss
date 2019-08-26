@@ -71,7 +71,9 @@ func (client *RpcClient) callCmdWithTimeout(cmd uint32, data []byte, timeout tim
 		return nil, ErrRpcClientIsDisconnected
 	}
 
-	after := time.After(timeout)
+	// after := time.After(timeout)
+	after := time.NewTimer(timeout)
+	defer after.Stop()
 
 	session = &rpcsession{
 		seq:  atomic.AddInt64(&client.sendSeq, 1),
@@ -81,7 +83,7 @@ func (client *RpcClient) callCmdWithTimeout(cmd uint32, data []byte, timeout tim
 	select {
 	case client.chSend <- asyncMessage{msg.data, nil}:
 		client.sessionMap[session.seq] = session
-	case <-after:
+	case <-after.C:
 		client.Unlock()
 		return nil, ErrRpcCallTimeout
 	}
@@ -94,7 +96,7 @@ func (client *RpcClient) callCmdWithTimeout(cmd uint32, data []byte, timeout tim
 			return nil, ErrRpcClientIsDisconnected
 		}
 		return msg.msg.Body(), msg.err
-	case <-after:
+	case <-after.C:
 		return nil, ErrRpcCallTimeout
 	}
 	return nil, ErrRpcCallClientError
