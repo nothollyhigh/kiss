@@ -76,9 +76,11 @@ func (c *Workers) Go(h func(), to time.Duration) error {
 	}
 	c.Add(1)
 	if to > 0 {
+		after := time.NewTimer(to)
+		defer after.Stop()
 		select {
 		case c.ch <- workerTask{nil, h}:
-		case <-time.After(to):
+		case <-after.C:
 			c.Done()
 			return ErrWorkersTimeout
 		}
