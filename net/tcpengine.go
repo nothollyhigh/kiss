@@ -35,6 +35,8 @@ type TcpEngin struct {
 	sockNoDelay bool
 	// tcp client keepalive
 	sockKeepAlive bool
+	// tcp client bufio reader
+	sockBufioReaderEnabled bool
 	// tcp client send queue size
 	sendQsize int
 	// tcp client receive buf length
@@ -205,16 +207,22 @@ func (engine *TcpEngin) RecvMsg(client *TcpClient) IMessage {
 		remoteAddr: client.Conn.RemoteAddr().String(),
 	}
 
+	// reader := client.Reader().(*bufio.Reader)
+
 	if pkt.err = client.Conn.SetReadDeadline(time.Now().Add(engine.sockRecvBlockTime)); pkt.err != nil {
 		log.Debug("%s RecvMsg SetReadDeadline Err: %v.", client.Conn.RemoteAddr().String(), pkt.err)
 		goto Exit
 	}
 
-	pkt.readLen, pkt.err = io.ReadFull(client.Conn, pkt.msg.data)
+	// log.Debug("---- reader 111: %v", reader.Buffered())
+
+	pkt.readLen, pkt.err = io.ReadFull(client.Reader(), pkt.msg.data)
 	if pkt.err != nil || pkt.readLen < DEFAULT_MESSAGE_HEAD_LEN {
 		log.Debug("%s RecvMsg Read Head Err: %v, readLen: %d.", client.Conn.RemoteAddr().String(), pkt.err, pkt.readLen)
 		goto Exit
 	}
+
+	// log.Debug("---- reader 222: %v", reader.Buffered())
 
 	pkt.dataLen = int(pkt.msg.BodyLen())
 
@@ -224,17 +232,19 @@ func (engine *TcpEngin) RecvMsg(client *TcpClient) IMessage {
 			goto Exit
 		}
 
-		if pkt.err = client.Conn.SetReadDeadline(time.Now().Add(engine.sockRecvBlockTime)); pkt.err != nil {
-			log.Debug("%s RecvMsg SetReadDeadline Err: %v.", client.Conn.RemoteAddr().String(), pkt.err)
-			goto Exit
-		}
+		// if pkt.err = client.Conn.SetReadDeadline(time.Now().Add(engine.sockRecvBlockTime)); pkt.err != nil {
+		// 	log.Debug("%s RecvMsg SetReadDeadline Err: %v.", client.Conn.RemoteAddr().String(), pkt.err)
+		// 	goto Exit
+		// }
 
 		pkt.msg.data = append(pkt.msg.data, make([]byte, pkt.dataLen)...)
-		pkt.readLen, pkt.err = io.ReadFull(client.Conn, pkt.msg.data[DEFAULT_MESSAGE_HEAD_LEN:])
+		pkt.readLen, pkt.err = io.ReadFull(client.Reader(), pkt.msg.data[DEFAULT_MESSAGE_HEAD_LEN:])
 		if pkt.err != nil {
 			log.Debug("%s RecvMsg Read Body Err: %v", client.Conn.RemoteAddr().String(), pkt.err)
 			goto Exit
 		}
+
+		// log.Debug("---- reader 333: %v", reader.Buffered())
 	}
 
 	pkt.msg.rawData = pkt.msg.data
@@ -462,8 +472,8 @@ func (engine *TcpEngin) SockNoDelay() bool {
 }
 
 // setting socket nodelay
-func (engine *TcpEngin) SetSockNoDelay(nodelay bool) {
-	engine.sockNoDelay = nodelay
+func (engine *TcpEngin) SetSockNoDelay(enable bool) {
+	engine.sockNoDelay = enable
 }
 
 // socket keepalive
@@ -472,8 +482,18 @@ func (engine *TcpEngin) SockKeepAlive() bool {
 }
 
 // setting socket keepalive
-func (engine *TcpEngin) SetSockKeepAlive(keepalive bool) {
-	engine.sockKeepAlive = keepalive
+func (engine *TcpEngin) SetSockKeepAlive(enable bool) {
+	engine.sockKeepAlive = enable
+}
+
+// socket bufio reader
+func (engine *TcpEngin) SockBufioReaderEnabled() bool {
+	return engine.sockBufioReaderEnabled
+}
+
+// setting socket bufio reader
+func (engine *TcpEngin) SetSockBufioReaderEnabled(enable bool) {
+	engine.sockBufioReaderEnabled = enable
 }
 
 // socket keepalive interval
@@ -568,20 +588,21 @@ func (engine *TcpEngin) BroadCast(msg IMessage) {
 // tcp engine factory
 func NewTcpEngine() *TcpEngin {
 	engine := &TcpEngin{
-		clients:           map[*TcpClient]struct{}{},
-		handlers:          map[uint32]func(*TcpClient, IMessage){},
-		running:           true,
-		Codec:             DefaultCodec,
-		sockNoDelay:       DefaultSockNodelay,
-		sockKeepAlive:     DefaultSockKeepalive,
-		sendQsize:         DefaultSendQSize,
-		sockRecvBufLen:    DefaultSockRecvBufLen,
-		sockSendBufLen:    DefaultSockSendBufLen,
-		sockMaxPackLen:    DefaultSockPackMaxLen,
-		sockLingerSeconds: DefaultSockLingerSeconds,
-		sockRecvBlockTime: DefaultSockRecvBlockTime,
-		sockSendBlockTime: DefaultSockSendBlockTime,
-		sockKeepaliveTime: DefaultSockKeepaliveTime,
+		clients:                map[*TcpClient]struct{}{},
+		handlers:               map[uint32]func(*TcpClient, IMessage){},
+		running:                true,
+		Codec:                  DefaultCodec,
+		sockNoDelay:            DefaultSockNodelay,
+		sockKeepAlive:          DefaultSockKeepalive,
+		sockBufioReaderEnabled: DefaultSockBufioReaderEnabled,
+		sendQsize:              DefaultSendQSize,
+		sockRecvBufLen:         DefaultSockRecvBufLen,
+		sockSendBufLen:         DefaultSockSendBufLen,
+		sockMaxPackLen:         DefaultSockPackMaxLen,
+		sockLingerSeconds:      DefaultSockLingerSeconds,
+		sockRecvBlockTime:      DefaultSockRecvBlockTime,
+		sockSendBlockTime:      DefaultSockSendBlockTime,
+		sockKeepaliveTime:      DefaultSockKeepaliveTime,
 	}
 
 	cipher := NewCipherGzip(DefaultThreshold)
