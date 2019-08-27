@@ -9,7 +9,8 @@ var (
 	DefaultSockNodelay = true
 	// default tcp keepalive
 	DefaultSockKeepalive = false
-
+	// default tcp bufio reader
+	DefaultSockBufioReaderEnabled = true
 	// default tcp client send queue size
 	DefaultSendQSize = 512
 	// default tcp client read buf length
