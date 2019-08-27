@@ -10,7 +10,7 @@ var (
 	// default tcp keepalive
 	DefaultSockKeepalive = false
 	// default tcp bufio reader
-	DefaultSockBufioReaderEnabled = true
+	DefaultSockBufioReaderEnabled = false
 	// default tcp client send queue size
 	DefaultSendQSize = 512
 	// default tcp client read buf length
