@@ -1,8 +1,10 @@
 package net
 
 import (
+	"bufio"
 	"github.com/nothollyhigh/kiss/log"
 	"github.com/nothollyhigh/kiss/util"
+	"io"
 	"net"
 	"strconv"
 	"strings"
@@ -17,6 +19,9 @@ type TcpClient struct {
 
 	// tcp connection
 	Conn *net.TCPConn
+
+	// bufio Reader
+	reader io.Reader
 
 	// tcp engine parent
 	parent *TcpEngin
@@ -80,6 +85,14 @@ func (client *TcpClient) Port() int {
 		}
 	}
 	return 0
+}
+
+// reader
+func (client *TcpClient) Reader() io.Reader {
+	if client.reader != nil {
+		return client.reader
+	}
+	return client.Conn
 }
 
 // set real ip
@@ -414,6 +427,13 @@ func (client *TcpClient) writeloop() {
 func (client *TcpClient) readloop() {
 	defer client.stop()
 	var imsg IMessage
+
+	if client.parent.SockBufioReaderEnabled() && client.parent.SockRecvBufLen() > 0 {
+		client.reader = bufio.NewReaderSize(client.Conn, client.parent.SockRecvBufLen())
+	} else {
+		client.reader = nil
+	}
+
 	for {
 		if imsg = client.parent.RecvMsg(client); imsg == nil {
 			break
