@@ -373,6 +373,7 @@ func (engine *TcpEngin) Handle(cmd uint32, handler func(client *TcpClient, msg I
 	if _, ok := engine.handlers[cmd]; ok {
 		log.Panic("Handle failed: handler for cmd %v exists", cmd)
 	}
+	log.Debug("Handle Cmd: %v", cmd)
 	engine.handlers[cmd] = handler
 }
 
@@ -464,6 +465,8 @@ func (engine *TcpEngin) HandleRpcMethod(method string, handler func(ctx *RpcCont
 	} else {
 		engine.rpcMethodHandlers[method] = handler
 	}
+
+	log.Debug("HandleRpcMethod: %v", method)
 }
 
 // socket nodelay
