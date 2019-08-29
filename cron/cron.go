@@ -19,6 +19,7 @@ type Cron struct {
 
 	timer  *time.Timer
 	chStop chan struct{}
+	expr   *cronexpr.Expression
 }
 
 func (cron *Cron) Start() {
@@ -89,6 +90,15 @@ func (cron *Cron) Stop() {
 	close(chStop)
 
 	cron.Wait()
+}
+
+func (cron *Cron) Next(fromTime time.Time) time.Time {
+	var next time.Time
+	if cron.expr != nil {
+		next = cron.expr.Next(fromTime)
+	}
+	return next
+
 }
 
 func New(tag string, cronLine string, async bool, task func()) *Cron {
