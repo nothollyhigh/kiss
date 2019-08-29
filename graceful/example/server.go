@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/nothollyhigh/kiss/graceful"
 	"github.com/nothollyhigh/kiss/log"
 	"github.com/nothollyhigh/kiss/net"
@@ -48,7 +47,7 @@ func onEcho(client *net.TcpClient, msg net.IMessage) {
 }
 
 func onEcho2(client *net.TcpClient, msg net.IMessage) {
-	echoModule2.PushNet(echoModule.onEcho, client, msg)
+	echoModule2.PushNet(echoModule2.onEcho, client, msg)
 }
 
 func main() {
@@ -60,7 +59,7 @@ func main() {
 	for i := 0; i < 10; i++ {
 		n := i
 		echoModule.After(time.Second*time.Duration(n), func() {
-			fmt.Println("--- :", n)
+			log.Info("time event: %v", n)
 		})
 	}
 
@@ -71,7 +70,6 @@ func main() {
 	util.Go(func() { server.Start(addr) })
 
 	util.HandleSignal(func(sig os.Signal) {
-		log.Info("--- signal: %v", sig)
 		if sig == syscall.SIGTERM || sig == syscall.SIGINT {
 			graceful.Stop()
 			server.StopWithTimeout(time.Second*10, nil)
