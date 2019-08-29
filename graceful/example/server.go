@@ -6,6 +6,7 @@ import (
 	"github.com/nothollyhigh/kiss/net"
 	"github.com/nothollyhigh/kiss/util"
 	"os"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -30,11 +31,30 @@ func (m *EchoModule) onEcho(client *net.TcpClient, msg net.IMessage) {
 
 type EchoModule2 struct {
 	graceful.Module
+	wgStop sync.WaitGroup
 }
 
 func (m *EchoModule2) onEcho(client *net.TcpClient, msg net.IMessage) {
 	log.Info("tcp server EchoModule2 from %v: %v", client.Conn.RemoteAddr().String(), string(msg.Body()))
 	client.SendMsg(msg)
+}
+
+// 异步推出
+func (m *EchoModule2) Stop() {
+	m.wgStop.Add(1)
+
+	m.After(time.Second*2, func() {
+		util.Go(func() {
+			// 先处理模块内部优雅退出, 父类退出
+			m.Module.Stop()
+
+			// 模块stop结束
+			m.wgStop.Done()
+		})
+	})
+
+	// 等待异步优雅推出
+	m.wgStop.Wait()
 }
 
 var (
