@@ -21,6 +21,7 @@ type handler struct {
 
 type Module struct {
 	sync.WaitGroup
+	qsize  int
 	chFunc chan func()
 	chStop chan struct{}
 
@@ -35,17 +36,14 @@ func (m *Module) Init() {
 
 }
 
-func (m *Module) Start(args ...interface{}) {
+func (m *Module) Start() {
 	m.Add(1)
 
-	qsize := DEFAULT_Q_SIZE
-	if len(args) > 0 {
-		if size, ok := args[0].(int); ok && size > 0 {
-			qsize = size
-		}
+	if m.qsize <= 0 {
+		m.qsize = DEFAULT_Q_SIZE
 	}
 
-	m.chFunc = make(chan func(), qsize)
+	m.chFunc = make(chan func(), m.qsize)
 	m.chStop = make(chan struct{})
 
 	if m.nextStateTimer == nil {
@@ -71,6 +69,10 @@ func (m *Module) Start(args ...interface{}) {
 			}
 		}
 	})
+}
+
+func (m *Module) SetQSize(size int) {
+	m.qsize = size
 }
 
 func (m *Module) EnableHeapTimer(enable bool) {
