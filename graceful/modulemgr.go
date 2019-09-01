@@ -13,9 +13,22 @@ var (
 )
 
 type M interface {
-	Start(args ...interface{})
-	After(to time.Duration, f func())
+	// init before module loop
+	Init()
+
+	// start module
+	Start()
+
+	// stop module, should be graceful
 	Stop()
+
+	// Next() set f to execute after timeout and cancel previous f at the same time
+	Next(timeout time.Duration, f func())
+
+	// After add f to execute after timeout
+	After(timeout time.Duration, f func())
+
+	// push f to module's queue
 	Push(f func(), args ...interface{}) error
 }
 
@@ -25,6 +38,7 @@ type ModuleMgr struct {
 	modules []M
 }
 
+// register module to module manager
 func (mgr *ModuleMgr) Register(m M) {
 	mgr.Lock()
 	defer mgr.Unlock()
@@ -32,14 +46,16 @@ func (mgr *ModuleMgr) Register(m M) {
 	mgr.modules = append(mgr.modules, m)
 }
 
-func (mgr *ModuleMgr) Start(args ...interface{}) {
+// start all modules
+func (mgr *ModuleMgr) Start() {
 	mgr.Lock()
 	defer mgr.Unlock()
 
 	for _, v := range mgr.modules {
 		t := reflect.TypeOf(v)
 		log.Debug("Module [%v] Start", t)
-		v.Start(args...)
+		v.Init()
+		v.Start()
 	}
 }
 
