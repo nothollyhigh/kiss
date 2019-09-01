@@ -2,7 +2,6 @@ package graceful
 
 import (
 	"github.com/nothollyhigh/kiss/log"
-	"github.com/nothollyhigh/kiss/net"
 	"github.com/nothollyhigh/kiss/util"
 	"reflect"
 	"sync"
@@ -17,8 +16,7 @@ type M interface {
 	Start(args ...interface{})
 	After(to time.Duration, f func())
 	Stop()
-	Push(f func())
-	PushNet(cmd func(*net.TcpClient, net.IMessage), cli *net.TcpClient, msg net.IMessage)
+	Push(f func(), args ...interface{}) error
 }
 
 type ModuleMgr struct {
