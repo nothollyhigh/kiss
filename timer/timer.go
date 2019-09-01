@@ -142,16 +142,17 @@ func (tm *Timer) Once(timeout time.Duration, cb func()) *TimerItem {
 	tm.Lock()
 	defer tm.Unlock()
 
+	now := time.Now()
 	item := &TimerItem{
 		Index:    len(tm.timers),
-		Expire:   time.Now().Add(timeout),
+		Expire:   now.Add(timeout),
 		Callback: cb,
 		Parent:   tm,
 	}
 	tm.timers = append(tm.timers, item)
 	heap.Fix(&(tm.timers), item.Index)
 	if head := tm.timers.Head(); head == item {
-		tm.trigger.Reset(head.Expire.Sub(time.Now()))
+		tm.trigger.Reset(head.Expire.Sub(now))
 	}
 
 	return item
