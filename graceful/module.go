@@ -3,13 +3,14 @@ package graceful
 import (
 	"fmt"
 	"github.com/nothollyhigh/kiss/net"
+	"github.com/nothollyhigh/kiss/timer"
 	"github.com/nothollyhigh/kiss/util"
 	"sync"
 	"time"
 )
 
 // var TIME_FOREVER = time.Duration(math.MaxInt64)
-var DEFAULT_Q_SIZE = 1024 * 8
+var DEFAULT_Q_SIZE = 1024 * 4
 
 type handler struct {
 	cli *net.TcpClient
@@ -22,7 +23,8 @@ type Module struct {
 	chFunc chan func()
 	chStop chan struct{}
 
-	ticker *time.Ticker
+	ticker          *time.Ticker
+	enableHeapTimer bool
 }
 
 func (m *Module) Start(args ...interface{}) {
@@ -49,6 +51,10 @@ func (m *Module) Start(args ...interface{}) {
 			}
 		}
 	})
+}
+
+func (m *Module) EnableHeapTimer(enable bool) {
+	m.enableHeapTimer = enable
 }
 
 func (m *Module) EnableTick(interval time.Duration, onTick func()) error {
@@ -78,9 +84,15 @@ func (m *Module) EnableTick(interval time.Duration, onTick func()) error {
 }
 
 func (m *Module) After(to time.Duration, f func()) {
-	time.AfterFunc(to, func() {
-		m.Push(f)
-	})
+	if !m.enableHeapTimer {
+		time.AfterFunc(to, func() {
+			m.Push(f)
+		})
+	} else {
+		timer.AfterFunc(to, func() {
+			m.Push(f)
+		})
+	}
 }
 
 func (m *Module) Stop() {
