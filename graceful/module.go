@@ -1,14 +1,14 @@
 package graceful
 
 import (
+	"fmt"
 	"github.com/nothollyhigh/kiss/net"
 	"github.com/nothollyhigh/kiss/util"
-	"math"
 	"sync"
 	"time"
 )
 
-var TIME_FOREVER = time.Duration(math.MaxInt64)
+// var TIME_FOREVER = time.Duration(math.MaxInt64)
 var DEFAULT_Q_SIZE = 1024 * 8
 
 type handler struct {
@@ -19,12 +19,10 @@ type handler struct {
 
 type Module struct {
 	sync.WaitGroup
-	chNet  chan handler
 	chFunc chan func()
 	chStop chan struct{}
 
-	// timer     *time.Timer
-	// timerFunc func()
+	ticker *time.Ticker
 }
 
 func (m *Module) Start(args ...interface{}) {
@@ -37,31 +35,46 @@ func (m *Module) Start(args ...interface{}) {
 		}
 	}
 
-	m.chNet = make(chan handler, qsize)
 	m.chFunc = make(chan func(), qsize)
 	m.chStop = make(chan struct{})
-
-	// m.timer = time.NewTimer(TIME_FOREVER)
 
 	util.Go(func() {
 		defer m.Done()
 		for {
 			select {
-			case h := <-m.chNet:
-				util.Safe(func() { h.cmd(h.cli, h.msg) })
 			case f := <-m.chFunc:
 				util.Safe(f)
 			case <-m.chStop:
 				return
-				// case <-m.timer.C:
-				// 	if m.timerFunc != nil {
-				// 		util.Safe(m.timerFunc)
-				// 	}
-				// 	m.timer.Reset(TIME_FOREVER)
-				// }
 			}
 		}
 	})
+}
+
+func (m *Module) EnableTick(interval time.Duration, onTick func()) error {
+	if m.ticker != nil {
+		return fmt.Errorf("ticker already started")
+	}
+
+	m.ticker = time.NewTicker(interval)
+
+	util.Go(func() {
+		defer func() {
+			m.ticker.Stop()
+			m.ticker = nil
+		}()
+
+		for {
+			select {
+			case <-m.ticker.C:
+				m.Push(onTick)
+			case <-m.chStop:
+				return
+			}
+		}
+	})
+
+	return nil
 }
 
 func (m *Module) After(to time.Duration, f func()) {
@@ -73,13 +86,21 @@ func (m *Module) After(to time.Duration, f func()) {
 func (m *Module) Stop() {
 	close(m.chStop)
 	m.Wait()
-
 }
 
-func (m *Module) Push(f func()) {
+func (m *Module) Push(f func(), args ...interface{}) error {
+	if len(args) > 0 {
+		if to, ok := args[0].(time.Duration); ok {
+			after := time.NewTimer(to)
+			defer after.Stop()
+			select {
+			case m.chFunc <- f:
+				return nil
+			case <-after.C:
+				return fmt.Errorf("timeout")
+			}
+		}
+	}
 	m.chFunc <- f
-}
-
-func (m *Module) PushNet(cmd func(*net.TcpClient, net.IMessage), cli *net.TcpClient, msg net.IMessage) {
-	m.chNet <- handler{cli, msg, cmd}
+	return nil
 }
