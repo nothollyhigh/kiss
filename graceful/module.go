@@ -5,11 +5,12 @@ import (
 	"github.com/nothollyhigh/kiss/net"
 	"github.com/nothollyhigh/kiss/timer"
 	"github.com/nothollyhigh/kiss/util"
+	"math"
 	"sync"
 	"time"
 )
 
-// var TIME_FOREVER = time.Duration(math.MaxInt64)
+var TIME_FOREVER = time.Duration(math.MaxInt64)
 var DEFAULT_Q_SIZE = 1024 * 4
 
 type handler struct {
@@ -23,8 +24,15 @@ type Module struct {
 	chFunc chan func()
 	chStop chan struct{}
 
+	nextStateTimer *time.Timer
+	nextStateFunc  func()
+
 	ticker          *time.Ticker
 	enableHeapTimer bool
+}
+
+func (m *Module) Init() {
+
 }
 
 func (m *Module) Start(args ...interface{}) {
@@ -40,12 +48,24 @@ func (m *Module) Start(args ...interface{}) {
 	m.chFunc = make(chan func(), qsize)
 	m.chStop = make(chan struct{})
 
+	if m.nextStateTimer == nil {
+		m.nextStateTimer = time.NewTimer(TIME_FOREVER)
+		m.nextStateFunc = nil
+	}
+
 	util.Go(func() {
 		defer m.Done()
 		for {
 			select {
 			case f := <-m.chFunc:
 				util.Safe(f)
+			case <-m.nextStateTimer.C:
+				if m.nextStateFunc != nil {
+					m.nextStateTimer.Reset(TIME_FOREVER)
+					f := m.nextStateFunc
+					m.nextStateFunc = nil
+					util.Safe(f)
+				}
 			case <-m.chStop:
 				return
 			}
@@ -83,13 +103,21 @@ func (m *Module) EnableTick(interval time.Duration, onTick func()) error {
 	return nil
 }
 
-func (m *Module) After(to time.Duration, f func()) {
+func (m *Module) Next(timeout time.Duration, f func()) {
+	if m.nextStateTimer != nil {
+		m.nextStateTimer.Stop()
+	}
+	m.nextStateTimer = time.NewTimer(timeout)
+	m.nextStateFunc = f
+}
+
+func (m *Module) After(timeout time.Duration, f func()) {
 	if !m.enableHeapTimer {
-		time.AfterFunc(to, func() {
+		time.AfterFunc(timeout, func() {
 			m.Push(f)
 		})
 	} else {
-		timer.AfterFunc(to, func() {
+		timer.AfterFunc(timeout, func() {
 			m.Push(f)
 		})
 	}
@@ -102,8 +130,8 @@ func (m *Module) Stop() {
 
 func (m *Module) Push(f func(), args ...interface{}) error {
 	if len(args) > 0 {
-		if to, ok := args[0].(time.Duration); ok {
-			after := time.NewTimer(to)
+		if timeout, ok := args[0].(time.Duration); ok {
+			after := time.NewTimer(timeout)
 			defer after.Stop()
 			select {
 			case m.chFunc <- f:
