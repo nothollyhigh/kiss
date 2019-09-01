@@ -82,8 +82,8 @@ func Register(m M) {
 	defaultModuleMgr.Register(m)
 }
 
-func Start(args ...interface{}) {
-	defaultModuleMgr.Start(args...)
+func Start() {
+	defaultModuleMgr.Start()
 }
 
 func Stop() {
