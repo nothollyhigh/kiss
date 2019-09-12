@@ -206,7 +206,7 @@ func (engine *WSEngine) onMessage(cli *WSClient, msg IMessage) {
 
 	cmd := msg.Cmd()
 	if cmd == CmdPing {
-		cli.SendMsg(ping2Msg)
+		cli.SendMsg(NewMessage(CmdPing2, nil))
 		return
 	}
 	if cmd == CmdPing2 {
