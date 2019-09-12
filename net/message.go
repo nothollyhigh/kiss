@@ -53,10 +53,6 @@ const (
 	CmdUserMax = uint32(0xFFFFFF)
 )
 
-var (
-	ping2Msg = NewMessage(CmdPing2, []byte{})
-)
-
 // message interface
 type IMessage interface {
 	// message header length
