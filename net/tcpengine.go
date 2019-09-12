@@ -331,7 +331,7 @@ func (engine *TcpEngin) OnMessage(client *TcpClient, msg IMessage) {
 
 	cmd := msg.Cmd()
 	if cmd == CmdPing {
-		client.SendMsg(ping2Msg)
+		client.SendMsg(NewMessage(CmdPing2, nil))
 		return
 	}
 	if cmd == CmdPing2 {
