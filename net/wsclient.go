@@ -174,7 +174,11 @@ func (cli *WSClient) Port() int {
 
 // setting real ip
 func (cli *WSClient) SetRealIp(ip string) {
-	cli.realIp = ip
+	if cli.realIp == "" {
+		cli.realIp = ip
+	} else if DefaultEnableMultiSetRealIp {
+		cli.realIp = ip
+	}
 }
 
 // bind data
