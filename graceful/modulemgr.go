@@ -26,7 +26,10 @@ type M interface {
 	Next(timeout time.Duration, f func())
 
 	// After add f to execute after timeout
-	After(timeout time.Duration, f func())
+	After(timeout time.Duration, f func()) interface{}
+
+	// Cancel timerId which is set by After
+	Cancel(timerId interface{})
 
 	// push f to module's queue
 	Push(f func(), args ...interface{}) error
