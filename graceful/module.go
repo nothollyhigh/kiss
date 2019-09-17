@@ -28,11 +28,12 @@ type Module struct {
 	nextStateTimer *time.Timer
 	nextStateFunc  func()
 
-	ticker          *time.Ticker
-	enableHeapTimer bool
+	// ticker          *time.Ticker
 
-	heepTimer *timer.Timer
-	timers    map[interface{}]util.Empty
+	timers map[interface{}]util.Empty
+
+	enableHeapTimer bool
+	heepTimer       *timer.Timer
 }
 
 func (m *Module) Init() {
@@ -85,31 +86,31 @@ func (m *Module) EnableHeapTimer(enable bool) {
 	m.enableHeapTimer = enable
 }
 
-func (m *Module) EnableTick(interval time.Duration, onTick func()) error {
-	if m.ticker != nil {
-		return fmt.Errorf("ticker already started")
-	}
+// func (m *Module) EnableTick(interval time.Duration, onTick func()) error {
+// 	if m.ticker != nil {
+// 		return fmt.Errorf("ticker already started")
+// 	}
 
-	m.ticker = time.NewTicker(interval)
+// 	m.ticker = time.NewTicker(interval)
 
-	util.Go(func() {
-		defer func() {
-			m.ticker.Stop()
-			m.ticker = nil
-		}()
+// 	util.Go(func() {
+// 		defer func() {
+// 			m.ticker.Stop()
+// 			m.ticker = nil
+// 		}()
 
-		for {
-			select {
-			case <-m.ticker.C:
-				m.Push(onTick)
-			case <-m.chStop:
-				return
-			}
-		}
-	})
+// 		for {
+// 			select {
+// 			case <-m.ticker.C:
+// 				m.Push(onTick)
+// 			case <-m.chStop:
+// 				return
+// 			}
+// 		}
+// 	})
 
-	return nil
-}
+// 	return nil
+// }
 
 func (m *Module) Next(timeout time.Duration, f func()) {
 	if m.nextStateTimer != nil {
