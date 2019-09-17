@@ -97,7 +97,11 @@ func (client *TcpClient) Reader() io.Reader {
 
 // set real ip
 func (client *TcpClient) SetRealIp(ip string) {
-	client.realIp = ip
+	if client.realIp == "" {
+		client.realIp = ip
+	} else if DefaultEnableMultiSetRealIp {
+		client.realIp = ip
+	}
 }
 
 // bind data
