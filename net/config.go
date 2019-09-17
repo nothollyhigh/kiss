@@ -47,4 +47,7 @@ var (
 
 	// default max websocket read length
 	DefaultReadLimit int64 = 1024 * 1024
+
+	// default enable set real ip multi times
+	DefaultEnableMultiSetRealIp = true
 )
