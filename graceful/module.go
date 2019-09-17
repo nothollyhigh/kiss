@@ -31,11 +31,15 @@ type Module struct {
 	ticker          *time.Ticker
 	enableHeapTimer bool
 
-	timers map[interface{}]util.Empty
+	heepTimer *timer.Timer
+	timers    map[interface{}]util.Empty
 }
 
 func (m *Module) Init() {
 	m.timers = map[interface{}]util.Empty{}
+	if m.enableHeapTimer {
+		m.heepTimer = timer.New(fmt.Sprintf("[Module %p]", m))
+	}
 }
 
 func (m *Module) Start() {
@@ -115,6 +119,31 @@ func (m *Module) Next(timeout time.Duration, f func()) {
 	m.nextStateFunc = f
 }
 
+func (m *Module) After(timeout time.Duration, f func()) interface{} {
+	var timerId interface{}
+	if !m.enableHeapTimer {
+		timerId = time.AfterFunc(timeout, func() {
+			m.Push(func() {
+				if _, ok := m.timers[timerId]; ok {
+					defer delete(m.timers, timerId)
+					f()
+				}
+			})
+		})
+	} else {
+		timerId = m.heepTimer.AfterFunc(timeout, func() {
+			m.Push(func() {
+				if _, ok := m.timers[timerId]; ok {
+					defer delete(m.timers, timerId)
+					f()
+				}
+			})
+		})
+	}
+	m.timers[timerId] = util.Empty{}
+	return timerId
+}
+
 func (m *Module) Cancel(timerId interface{}) {
 	if _, ok := m.timers[timerId]; ok {
 		defer delete(m.timers, timerId)
@@ -131,33 +160,11 @@ func (m *Module) Cancel(timerId interface{}) {
 	}
 }
 
-func (m *Module) After(timeout time.Duration, f func()) interface{} {
-	var timerId interface{}
-	if !m.enableHeapTimer {
-		timerId = time.AfterFunc(timeout, func() {
-			m.Push(func() {
-				if _, ok := m.timers[timerId]; ok {
-					defer delete(m.timers, timerId)
-					f()
-				}
-			})
-		})
-	} else {
-		timerId = timer.AfterFunc(timeout, func() {
-			m.Push(func() {
-				if _, ok := m.timers[timerId]; ok {
-					defer delete(m.timers, timerId)
-					f()
-				}
-			})
-		})
-	}
-	m.timers[timerId] = util.Empty{}
-	return timerId
-}
-
 func (m *Module) Stop() {
 	close(m.chStop)
+	if m.enableHeapTimer {
+		m.heepTimer.Stop()
+	}
 	m.Wait()
 }
 
