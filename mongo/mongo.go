@@ -3,23 +3,26 @@ package mongo
 import (
 	"errors"
 	"github.com/nothollyhigh/kiss/log"
+	"github.com/nothollyhigh/kiss/util"
 	"gopkg.in/mgo.v2"
 	"time"
-	//"github.com/nothollyhigh/kiss/util"
 )
 
 //[mongodb://][user:pass@]host1[:port1][,host2[:port2],...][/database][?options]
 
-const defaultPoolSize = 10
+const (
+	defaultPoolSize          = 10
+	defaultConcurrency       = 100
+	defaultKeepaliveInterval = time.Second * 300
+)
 
 type Config struct {
-	Addrs    []string `json:"Addrs"`
-	Username string   `json:"Username"`
-	Password string   `json:"Password"`
-	Database string   `json:"Database"`
-	//ConnString string `json:"ConnString"`
-	PoolSize int `json:"PoolSize"`
-	// PoolSizeMultiple int       `json:"PoolSizeMultiple"`
+	Addrs             []string  `json:"Addrs"`
+	Username          string    `json:"Username"`
+	Password          string    `json:"Password"`
+	Database          string    `json:"Database"`
+	PoolSize          int       `json:"PoolSize"`
+	Concurrency       int       `json:"Concurrency"`
 	Safe              *mgo.Safe `json:"Safe"`
 	DialTimeout       int       `json:"DialTimeout"`
 	SocketTimeout     int       `json:"SocketTimeout"`
@@ -41,14 +44,17 @@ func (wrap *MongoSessionWrap) init(conf Config) {
 	}
 
 	wrap.SetMode(mgo.Strong, true)
-	wrap.SetSocketTimeout(conf.socketTimeout)
+	wrap.SetPoolLimit(1)
 	wrap.SetCursorTimeout(0)
+	wrap.SetSocketTimeout(conf.socketTimeout)
 }
 
 func (wrap *MongoSessionWrap) Clone() *MongoSessionWrap {
-	wrap.tmp = wrap.Session
-	wrap.Session = wrap.Session.Clone()
-	return wrap
+	return &MongoSessionWrap{
+		parent:  wrap.parent,
+		tmp:     wrap.Session,
+		Session: wrap.Session.Clone(),
+	}
 }
 
 func (wrap *MongoSessionWrap) Close() {
@@ -68,6 +74,7 @@ type Mongo struct {
 	ticker    *time.Ticker
 	chSession chan *MongoSessionWrap
 	sessions  []*MongoSessionWrap
+	chStop    chan util.Empty
 }
 
 func (m *Mongo) Session() *MongoSessionWrap {
@@ -99,6 +106,30 @@ func (m *Mongo) EnsureIndex(dbname string, cname string, keys []string) {
 	}
 }
 
+func (m *Mongo) Keepalive() {
+	for {
+		select {
+		case <-m.chStop:
+			for _, session := range m.sessions {
+				session.Close()
+			}
+			return
+		case <-m.ticker.C:
+			for _, session := range m.sessions {
+				util.Safe(func() {
+					if err := session.ping(); err != nil {
+						log.Debug("Mongo Ping: %v", err)
+					}
+				})
+			}
+		}
+	}
+}
+
+func (m *Mongo) Stop() {
+	m.ticker.Stop()
+}
+
 func New(conf Config) *Mongo {
 	log.Info("mongo.New Connect To Mongo ...")
 	if conf.DialTimeout > 0 {
@@ -114,10 +145,13 @@ func New(conf Config) *Mongo {
 	if conf.KeepaliveInterval > 0 {
 		conf.keepaliveInterval = time.Second * time.Duration(conf.KeepaliveInterval)
 	} else {
-		conf.keepaliveInterval = time.Second * 300
+		conf.keepaliveInterval = defaultKeepaliveInterval
 	}
 	if conf.PoolSize <= 0 {
 		conf.PoolSize = defaultPoolSize
+	}
+	if conf.Concurrency <= 0 {
+		conf.Concurrency = defaultConcurrency
 	}
 
 	dialInfo := mgo.DialInfo{
@@ -128,54 +162,32 @@ func New(conf Config) *Mongo {
 		Database: conf.Database,
 	}
 
-	session, err := mgo.DialWithInfo(&dialInfo)
-	//session, err := mgo.DialWithTimeout(conf.ConnString, conf.dialTimeout)
-	if err != nil {
-		log.Fatal("mongo.New mgo.DialWithTimeout failed: %v", err)
+	mongo := &Mongo{Conf: conf, ticker: time.NewTicker(conf.keepaliveInterval), chSession: make(chan *MongoSessionWrap, conf.PoolSize*conf.Concurrency), chStop: make(chan util.Empty, 1)}
+
+	for i := 0; i < conf.PoolSize; i++ {
+		session, err := mgo.DialWithInfo(&dialInfo)
+		//session, err := mgo.DialWithTimeout(conf.ConnString, conf.dialTimeout)
+		if err != nil {
+			log.Fatal("mongo.New mgo.DialWithTimeout failed: %v", err)
+		}
+
+		err = session.Ping()
+		if err != nil {
+			log.Fatal("mongo.New failed: %v", err)
+		}
+
+		mongo.sessions = append(mongo.sessions, &MongoSessionWrap{session, mongo, nil})
+		mongo.sessions[i].init(conf)
+		mongo.chSession <- mongo.sessions[i]
 	}
 
-	err = session.Ping()
-	if err != nil {
-		log.Fatal("mongo.New failed: %v", err)
-	}
-
-	mongo := &Mongo{Conf: conf, ticker: time.NewTicker(conf.keepaliveInterval), chSession: make(chan *MongoSessionWrap, conf.PoolSize)}
-	mongo.sessions = append(mongo.sessions, &MongoSessionWrap{session, mongo, nil})
-	mongo.sessions[0].init(conf)
-	mongo.chSession <- mongo.sessions[0]
-
-	if conf.PoolSize > 1 {
-		for i := 1; i < conf.PoolSize; i++ {
-			sessionCopy := &MongoSessionWrap{session.Copy(), mongo, nil}
-			sessionCopy.init(conf)
-			mongo.chSession <- sessionCopy
-			mongo.sessions = append(mongo.sessions, sessionCopy)
+	for i := 1; i < conf.Concurrency; i++ {
+		for _, session := range mongo.sessions {
+			mongo.chSession <- session
 		}
 	}
 
-	// if conf.PoolSizeMultiple > 1 {
-	// 	for i := 0; i < conf.PoolSizeMultiple-1; i++ {
-	// 		for j := 0; j < conf.PoolSize; j++ {
-	// 			sess := mongo.sessions[j]
-	// 			mongo.sessions = append(mongo.sessions, &MongoSessionWrap{sess.Session, &sync.Mutex{}})
-	// 		}
-	// 	}
-	// }
-
-	// util.Go(func() {
-	// 	for {
-	// 		if _, ok := <-mongo.ticker.C; !ok {
-	// 			break
-	// 		}
-	// 		for _, session := range mongo.sessions {
-	// 			util.Safe(func() {
-	// 				if err := session.ping(); err != nil {
-	// 					log.Debug("Mongo Ping: %v", err)
-	// 				}
-	// 			})
-	// 		}
-	// 	}
-	// })
+	util.Go(mongo.Keepalive)
 
 	log.Info("mongo.New(pool size: %d) Connect To Mongo Success", len(mongo.sessions))
 
