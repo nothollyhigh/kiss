@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	ErrWorkersTimeout = errors.New("timeout")
-	ErrWorkersStopped = errors.New("workers stopped")
+	ErrWorkerPoolTimeout = errors.New("timeout")
+	ErrWorkerPoolStopped = errors.New("worker pool has stopped")
 )
 
 func Go(cb func()) {
@@ -36,70 +36,71 @@ func Go(cb func()) {
 // 	}()
 // }
 
-type workerTask struct {
-	wg     *sync.WaitGroup
-	caller func()
-}
-
-type Workers struct {
+type WorkerPool struct {
+	sync.RWMutex
 	sync.WaitGroup
 	tag     string
-	ch      chan workerTask
+	chTask  chan func()
 	running bool
 }
 
-func (c *Workers) runLoop(partition int) {
+func (c *WorkerPool) runLoop(partition int) {
 	Go(func() {
-		// log.Debug("cors %v child-%v start", c.tag, partition)
-		defer func() {
-			// /log.Debug("cors %v child-%v exit", c.tag, partition)
-			c.Done()
-		}()
-		for task := range c.ch {
-			if task.wg == nil {
-				Safe(task.caller)
-			} else {
-				func() {
-					defer task.wg.Done()
-					defer HandlePanic()
-					task.caller()
-				}()
-			}
-			c.Done()
+		defer c.Done()
+
+		for h := range c.chTask {
+			Safe(func() {
+				defer c.Done()
+				h()
+			})
+
 		}
 	})
 }
 
-func (c *Workers) Go(h func(), to time.Duration) error {
+func (c *WorkerPool) Go(h func(), to time.Duration) error {
+	c.RLock()
+	defer c.RUnlock()
+
 	if !c.running {
-		return ErrWorkersStopped
+		return ErrWorkerPoolStopped
 	}
+
+	defer HandlePanic()
+
 	c.Add(1)
+
 	if to > 0 {
 		after := time.NewTimer(to)
 		defer after.Stop()
 		select {
-		case c.ch <- workerTask{nil, h}:
+		case c.chTask <- h:
 		case <-after.C:
 			c.Done()
-			return ErrWorkersTimeout
+			return ErrWorkerPoolTimeout
 		}
 	} else {
-		c.ch <- workerTask{nil, h}
+		c.chTask <- h
 	}
 	return nil
 }
 
-func (c *Workers) Stop() {
-	c.running = false
-	close(c.ch)
+func (c *WorkerPool) Stop() {
+	c.Add(1)
+	Go(func() {
+		c.Lock()
+		defer c.Unlock()
+		defer c.Done()
+		c.running = false
+		close(c.chTask)
+	})
 	c.Wait()
 }
 
-func NewWorkers(tag string, qCap int, corNum int) *Workers {
-	c := &Workers{
+func NewWorkerPool(tag string, qCap int, corNum int) *WorkerPool {
+	c := &WorkerPool{
 		tag:     tag,
-		ch:      make(chan workerTask, qCap),
+		chTask:  make(chan func(), qCap),
 		running: true,
 	}
 	for i := 0; i < corNum; i++ {
@@ -126,40 +127,35 @@ func (task *LinkTask) WaitPre() interface{} {
 	return nil
 }
 
-type WorkersLink struct {
-	sync.Mutex
+type WorkerPoolLink struct {
+	sync.RWMutex
 	sync.WaitGroup
 	tag     string
-	ch      chan *LinkTask
+	chTask  chan *LinkTask
 	pre     *LinkTask
 	running bool
 }
 
-func (c *WorkersLink) runLoop(partition int) {
+func (c *WorkerPoolLink) runLoop(partition int) {
 	Go(func() {
-		// log.Debug("cors %v child-%v start", c.tag, partition)
-		defer func() {
-			// log.Debug("cors %v child-%v exit", c.tag, partition)
-			c.Done()
-		}()
-		for task := range c.ch {
-			func() {
-				defer HandlePanic()
+		defer c.Done()
+		for task := range c.chTask {
+			Safe(func() {
+				defer c.Done()
 				task.caller(task)
-
-			}()
-			c.Done()
+			})
 		}
 	})
 }
 
-func (c *WorkersLink) Go(h func(task *LinkTask)) error {
-	if !c.running {
-		return ErrWorkersStopped
-	}
-	c.Add(1)
+func (c *WorkerPoolLink) Go(h func(task *LinkTask)) error {
+	c.RLock()
+	defer c.RUnlock()
 
-	c.Lock()
+	if !c.running {
+		return ErrWorkerPoolStopped
+	}
+
 	var task *LinkTask
 	if c.pre != nil {
 		task = &LinkTask{
@@ -174,29 +170,29 @@ func (c *WorkersLink) Go(h func(task *LinkTask)) error {
 		}
 	}
 	c.pre = task
-	c.Unlock()
-	c.ch <- task
+
+	c.Add(1)
+	c.chTask <- task
+
 	return nil
 }
 
-func (c *WorkersLink) Stop() {
-	c.running = false
-	close(c.ch)
+func (c *WorkerPoolLink) Stop() {
+	c.Add(1)
+	Go(func() {
+		c.Lock()
+		defer c.Unlock()
+		defer c.Done()
+		c.running = false
+		close(c.chTask)
+	})
 	c.Wait()
 }
 
-func (c *WorkersLink) StopAsync() {
-	Go(func() {
-		c.running = false
-		close(c.ch)
-		c.Wait()
-	})
-}
-
-func NewWorkersLink(tag string, qCap int, corNum int) *WorkersLink {
-	c := &WorkersLink{
+func NewWorkerPoolLink(tag string, qCap int, corNum int) *WorkerPoolLink {
+	c := &WorkerPoolLink{
 		tag:     tag,
-		ch:      make(chan *LinkTask, qCap),
+		chTask:  make(chan *LinkTask, qCap),
 		running: true,
 	}
 	for i := 0; i < corNum; i++ {
