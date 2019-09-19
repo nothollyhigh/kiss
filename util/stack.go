@@ -20,7 +20,7 @@ func GetStacks(args ...interface{}) string {
 		if !ok || i > 50 {
 			break
 		}
-		errstr += fmt.Sprintf("    stack: %d %v [file: %s] [func: %s] [line: %d]\n", i-1, ok, file, runtime.FuncForPC(pc).Name(), line)
+		errstr += fmt.Sprintf("\tstack: %d %v [file: %s] [func: %s] [line: %d]\n", i-1, ok, file, runtime.FuncForPC(pc).Name(), line)
 
 		i++
 	}
