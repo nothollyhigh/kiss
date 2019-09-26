@@ -207,22 +207,16 @@ func (engine *TcpEngin) RecvMsg(client *TcpClient) IMessage {
 		remoteAddr: client.Conn.RemoteAddr().String(),
 	}
 
-	// reader := client.Reader().(*bufio.Reader)
-
 	if pkt.err = client.Conn.SetReadDeadline(time.Now().Add(engine.sockRecvBlockTime)); pkt.err != nil {
 		log.Debug("%s RecvMsg SetReadDeadline Err: %v.", client.Conn.RemoteAddr().String(), pkt.err)
 		goto Exit
 	}
-
-	// log.Debug("---- reader 111: %v", reader.Buffered())
 
 	pkt.readLen, pkt.err = io.ReadFull(client.Reader(), pkt.msg.data)
 	if pkt.err != nil || pkt.readLen < DEFAULT_MESSAGE_HEAD_LEN {
 		log.Debug("%s RecvMsg Read Head Err: %v, readLen: %d.", client.Conn.RemoteAddr().String(), pkt.err, pkt.readLen)
 		goto Exit
 	}
-
-	// log.Debug("---- reader 222: %v", reader.Buffered())
 
 	pkt.dataLen = int(pkt.msg.BodyLen())
 
@@ -232,11 +226,6 @@ func (engine *TcpEngin) RecvMsg(client *TcpClient) IMessage {
 			goto Exit
 		}
 
-		// if pkt.err = client.Conn.SetReadDeadline(time.Now().Add(engine.sockRecvBlockTime)); pkt.err != nil {
-		// 	log.Debug("%s RecvMsg SetReadDeadline Err: %v.", client.Conn.RemoteAddr().String(), pkt.err)
-		// 	goto Exit
-		// }
-
 		pkt.msg.data = append(pkt.msg.data, make([]byte, pkt.dataLen)...)
 		pkt.readLen, pkt.err = io.ReadFull(client.Reader(), pkt.msg.data[DEFAULT_MESSAGE_HEAD_LEN:])
 		if pkt.err != nil {
@@ -244,7 +233,6 @@ func (engine *TcpEngin) RecvMsg(client *TcpClient) IMessage {
 			goto Exit
 		}
 
-		// log.Debug("---- reader 333: %v", reader.Buffered())
 	}
 
 	pkt.msg.rawData = pkt.msg.data
