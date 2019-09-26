@@ -56,9 +56,11 @@ func (ws *WaitSession) Wait(sess interface{}, timeout time.Duration) (interface{
 
 		var data interface{}
 		if timeout > 0 {
+			after := time.NewTimer(timeout)
+			defer after.Stop()
 			select {
 			case data = <-done:
-			case <-time.After(timeout):
+			case <-after.C:
 				ws.Lock()
 				delete(ws.sessions, sess)
 				ws.Unlock()
