@@ -1,8 +1,6 @@
 package net
 
 import (
-	//"context"
-	//"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/nothollyhigh/kiss/log"
 	"github.com/nothollyhigh/kiss/util"
@@ -219,8 +217,10 @@ func (s *WSServer) Shutdown(timeout time.Duration, cb func(error)) {
 			done <- struct{}{}
 		})
 
+		after := time.NewTimer(timeout)
+		defer after.Stop()
 		select {
-		case <-time.After(timeout):
+		case <-after.C:
 			log.Debug("WSServer Shutdown timeout")
 			if cb != nil {
 				cb(ErrWSEngineShutdownTimeout)
