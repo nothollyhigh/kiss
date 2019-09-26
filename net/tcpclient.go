@@ -244,10 +244,12 @@ func (client *TcpClient) pushDataSync(data []byte) error {
 		// 	client.Stop()
 		// 	return ErrTcpClientWriteHalf
 		// }
+		after := time.NewTimer(client.parent.SockSendBlockTime())
+		defer after.Stop()
 		select {
 		case client.chSend <- asyncMessage{data, nil}:
 			client.Unlock()
-		case <-time.After(client.parent.SockSendBlockTime()):
+		case <-after.C:
 			client.Unlock()
 			err = ErrRpcCallTimeout
 		}
