@@ -81,11 +81,13 @@ func (m *Mongo) Session() *MongoSessionWrap {
 	return <-m.chSession
 }
 
-func (m *Mongo) SessionWithTimeout(to time.Duration) (*MongoSessionWrap, error) {
+func (m *Mongo) SessionWithTimeout(timeout time.Duration) (*MongoSessionWrap, error) {
+	after := time.NewTimer(timeout)
+	defer after.Stop()
 	select {
 	case sess := <-m.chSession:
 		return sess, nil
-	case <-time.After(to):
+	case <-after.C:
 	}
 	return nil, errors.New("mongodb get session timeout")
 }
