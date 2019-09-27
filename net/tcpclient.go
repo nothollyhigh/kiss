@@ -476,10 +476,10 @@ func createTcpClient(conn *net.TCPConn, parent *TcpEngin, cipher ICipher) *TcpCl
 		running:    true,
 	}
 
-	addr := conn.RemoteAddr().String()
-	if pos := strings.LastIndex(addr, ":"); pos > 0 {
-		client.realIp = addr[:pos]
-	}
+	// addr := conn.RemoteAddr().String()
+	// if pos := strings.LastIndex(addr, ":"); pos > 0 {
+	// 	client.realIp = addr[:pos]
+	// }
 
 	return client
 }
