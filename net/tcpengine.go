@@ -192,19 +192,17 @@ func (engine *TcpEngin) RecvMsg(client *TcpClient) IMessage {
 	}
 
 	pkt := struct {
-		err        error
-		msg        *Message
-		readLen    int
-		dataLen    int
-		remoteAddr string
+		err     error
+		msg     *Message
+		readLen int
+		dataLen int
 	}{
 		err: nil,
 		msg: &Message{
 			data: make([]byte, DEFAULT_MESSAGE_HEAD_LEN),
 		},
-		readLen:    0,
-		dataLen:    0,
-		remoteAddr: client.Conn.RemoteAddr().String(),
+		readLen: 0,
+		dataLen: 0,
 	}
 
 	if pkt.err = client.Conn.SetReadDeadline(time.Now().Add(engine.sockRecvBlockTime)); pkt.err != nil {
