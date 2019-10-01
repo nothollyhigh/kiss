@@ -31,8 +31,8 @@ type M interface {
 	// Cancel timerId which is set by After
 	Cancel(timerId interface{})
 
-	// push f to module's queue
-	Push(f func(), args ...interface{}) error
+	// push f to module's queue and execut orderly
+	Exec(f func(), args ...interface{}) error
 }
 
 type ModuleMgr struct {
