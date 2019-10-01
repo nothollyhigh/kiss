@@ -372,7 +372,7 @@ type HelloResponse struct {
 	Message string
 }
 
-func onConnected(c *net.TcpClient) {
+func onConnected(c *net.RpcClient) {
 	log.Info("RpcClient OnConnected")
 }
 
