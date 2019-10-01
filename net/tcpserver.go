@@ -22,7 +22,7 @@ type TcpServer struct {
 	maxLoad       int64
 	listener      *net.TCPListener
 	stopTimeout   time.Duration
-	onStop        func()
+	onStopTimeout func()
 	onStopHandler func(server *TcpServer)
 }
 
@@ -107,8 +107,8 @@ func (server *TcpServer) listenerLoop() error {
 				time.Sleep(tempDelay)
 			} else {
 				log.Debug("[TcpServer %s] Accept error: %v", server.tag, err)
-				if server.onStop != nil {
-					server.onStop()
+				if server.onStopHandler != nil {
+					server.onStopHandler(server)
 				}
 				break
 			}
@@ -164,13 +164,12 @@ func (server *TcpServer) Stop() {
 	server.Done()
 
 	if server.stopTimeout > 0 {
-		timer := time.AfterFunc(server.stopTimeout, func() {
+		time.AfterFunc(server.stopTimeout, func() {
 			log.Debug("[TcpServer %s] Stop Timeout.", server.tag)
-			if server.onStop != nil {
-				server.onStop()
+			if server.onStopTimeout != nil {
+				server.onStopTimeout()
 			}
 		})
-		defer timer.Stop()
 	}
 
 	log.Debug("[TcpServer %s] Stop Waiting...", server.tag)
@@ -186,9 +185,9 @@ func (server *TcpServer) Stop() {
 }
 
 // stop with timeout
-func (server *TcpServer) StopWithTimeout(stopTimeout time.Duration, onStop func()) {
+func (server *TcpServer) StopWithTimeout(stopTimeout time.Duration, onStopTimeout func()) {
 	server.stopTimeout = stopTimeout
-	server.onStop = onStop
+	server.onStopTimeout = onStopTimeout
 	server.Stop()
 }
 
@@ -199,7 +198,7 @@ func (server *TcpServer) Serve(addr string, stopTimeout time.Duration) {
 	})
 
 	server.stopTimeout = stopTimeout
-	server.onStop = func() {
+	server.onStopTimeout = func() {
 		os.Exit(0)
 	}
 
