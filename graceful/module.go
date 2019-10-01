@@ -102,7 +102,7 @@ func (m *Module) EnableHeapTimer(enable bool) {
 // 		for {
 // 			select {
 // 			case <-m.ticker.C:
-// 				m.Push(onTick)
+// 				m.push(onTick)
 // 			case <-m.chStop:
 // 				return
 // 			}
@@ -124,7 +124,7 @@ func (m *Module) After(timeout time.Duration, f func()) interface{} {
 	var timerId interface{}
 	if !m.enableHeapTimer {
 		timerId = time.AfterFunc(timeout, func() {
-			m.Push(func() {
+			m.push(func() {
 				if _, ok := m.timers[timerId]; ok {
 					defer delete(m.timers, timerId)
 					f()
@@ -133,7 +133,7 @@ func (m *Module) After(timeout time.Duration, f func()) interface{} {
 		})
 	} else {
 		timerId = m.heepTimer.AfterFunc(timeout, func() {
-			m.Push(func() {
+			m.push(func() {
 				if _, ok := m.timers[timerId]; ok {
 					defer delete(m.timers, timerId)
 					f()
@@ -169,7 +169,7 @@ func (m *Module) Stop() {
 	m.Wait()
 }
 
-func (m *Module) Push(f func(), args ...interface{}) error {
+func (m *Module) push(f func(), args ...interface{}) error {
 	if len(args) > 0 {
 		if timeout, ok := args[0].(time.Duration); ok {
 			after := time.NewTimer(timeout)
@@ -184,4 +184,8 @@ func (m *Module) Push(f func(), args ...interface{}) error {
 	}
 	m.chFunc <- f
 	return nil
+}
+
+func (m *Module) Exec(f func(), args ...interface{}) error {
+	return m.push(f, args...)
 }
