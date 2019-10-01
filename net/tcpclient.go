@@ -485,7 +485,7 @@ func createTcpClient(conn *net.TCPConn, parent *TcpEngin, cipher ICipher) *TcpCl
 }
 
 // tcp client factory
-func NewTcpClient(addr string, parent *TcpEngin, cipher ICipher, autoReconn bool, onConnected func(*TcpClient)) (*TcpClient, error) {
+func newTcpClient(addr string, parent *TcpEngin, cipher ICipher, autoReconn bool, onConnected func(*TcpClient)) (*TcpClient, error) {
 	tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
 		log.Debug("NewTcpClient failed: ", err)
@@ -536,11 +536,16 @@ func NewTcpClient(addr string, parent *TcpEngin, cipher ICipher, autoReconn bool
 			})
 		})
 	}
+
+	return client, nil
+}
+
+func NewTcpClient(addr string, parent *TcpEngin, cipher ICipher, autoReconn bool, onConnected func(*TcpClient)) (*TcpClient, error) {
+	client, err := newTcpClient(addr, parent, cipher, autoReconn, onConnected)
 	if onConnected != nil {
 		util.Go(func() {
 			onConnected(client)
 		})
 	}
-
-	return client, nil
+	return client, err
 }
