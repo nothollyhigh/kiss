@@ -79,7 +79,7 @@ package net
 // 			case CmdPing2:
 // 			case CmdRpcMethod:
 // 				rpcclient.Lock()
-// 				session, ok := rpcclient.sessionMap[msg.RpcSeq()]
+// 				session, ok := rpcclient.sessionMap[msg.Ext()]
 // 				rpcclient.Unlock()
 // 				if ok {
 // 					session.done <- &RpcMessage{msg, nil}
@@ -88,7 +88,7 @@ package net
 // 				}
 // 			case CmdRpcError:
 // 				rpcclient.Lock()
-// 				session, ok := rpcclient.sessionMap[msg.RpcSeq()]
+// 				session, ok := rpcclient.sessionMap[msg.Ext()]
 // 				rpcclient.Unlock()
 // 				if ok {
 // 					session.done <- &RpcMessage{msg, errors.New(string(msg.Body()))}
