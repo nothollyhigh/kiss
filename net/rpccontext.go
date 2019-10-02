@@ -42,13 +42,13 @@ func (ctx *RpcContext) Method() string {
 // write data
 func (ctx *RpcContext) WriteData(data []byte) error {
 
-	return ctx.client.pushDataSync(NewRpcMessage(ctx.message.Cmd(), ctx.message.RpcSeq(), data).data)
+	return ctx.client.pushDataSync(NewRpcMessage(ctx.message.Cmd(), ctx.message.Ext(), data).data)
 }
 
 // write message
 func (ctx *RpcContext) WriteMsg(msg IMessage) error {
 	if ctx.message != msg {
-		msg.SetRpcSeq(ctx.message.RpcSeq())
+		msg.SetExt(ctx.message.Ext())
 	}
 	return ctx.client.pushDataSync(msg.Data())
 }
@@ -64,7 +64,7 @@ func (ctx *RpcContext) Write(v interface{}) error {
 	if err != nil {
 		return err
 	}
-	return ctx.client.pushDataSync(NewRpcMessage(ctx.message.Cmd(), ctx.message.RpcSeq(), data).data)
+	return ctx.client.pushDataSync(NewRpcMessage(ctx.message.Cmd(), ctx.message.Ext(), data).data)
 }
 
 // bind json
@@ -78,7 +78,7 @@ func (ctx *RpcContext) WriteJson(v interface{}) error {
 	if err != nil {
 		return err
 	}
-	return ctx.client.pushDataSync(NewRpcMessage(ctx.message.Cmd(), ctx.message.RpcSeq(), data).data)
+	return ctx.client.pushDataSync(NewRpcMessage(ctx.message.Cmd(), ctx.message.Ext(), data).data)
 }
 
 // bind gob data
@@ -93,7 +93,7 @@ func (ctx *RpcContext) WriteGob(v interface{}) error {
 	if err != nil {
 		return err
 	}
-	return ctx.client.pushDataSync(NewRpcMessage(ctx.message.Cmd(), ctx.message.RpcSeq(), buffer.Bytes()).data)
+	return ctx.client.pushDataSync(NewRpcMessage(ctx.message.Cmd(), ctx.message.Ext(), buffer.Bytes()).data)
 }
 
 // bind msgpack data
@@ -107,7 +107,7 @@ func (ctx *RpcContext) WriteMsgpack(v interface{}) error {
 	if err != nil {
 		return err
 	}
-	return ctx.client.pushDataSync(NewRpcMessage(ctx.message.Cmd(), ctx.message.RpcSeq(), data).data)
+	return ctx.client.pushDataSync(NewRpcMessage(ctx.message.Cmd(), ctx.message.Ext(), data).data)
 }
 
 // bind protobuf data
@@ -121,10 +121,10 @@ func (ctx *RpcContext) WriteProtobuf(v proto.Message) error {
 	if err != nil {
 		return err
 	}
-	return ctx.client.pushDataSync(NewRpcMessage(ctx.message.Cmd(), ctx.message.RpcSeq(), data).data)
+	return ctx.client.pushDataSync(NewRpcMessage(ctx.message.Cmd(), ctx.message.Ext(), data).data)
 }
 
 // write error
 func (ctx *RpcContext) Error(errText string) {
-	ctx.client.pushDataSync(NewRpcMessage(CmdRpcError, ctx.message.RpcSeq(), []byte(errText)).data)
+	ctx.client.pushDataSync(NewRpcMessage(CmdRpcError, ctx.message.Ext(), []byte(errText)).data)
 }
