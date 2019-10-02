@@ -401,18 +401,18 @@ func (engine *TcpEngin) onRpcMethod(client *TcpClient, imsg IMessage) {
 	msg := imsg.(*Message)
 	data := msg.Body()
 	if len(data) < 2 {
-		client.SendMsg(NewRpcMessage(CmdRpcError, msg.RpcSeq(), []byte("invalid rpc payload")))
+		client.SendMsg(NewRpcMessage(CmdRpcError, msg.Ext(), []byte("invalid rpc payload")))
 		return
 	}
 	methodLen := int(data[len(data)-1])
 	if methodLen <= 0 || methodLen >= 128 || len(data)-1 < methodLen {
-		client.SendMsg(NewRpcMessage(CmdRpcError, msg.RpcSeq(), []byte(fmt.Sprintf("invalid rpc method length %d, should be (1-127)", methodLen))))
+		client.SendMsg(NewRpcMessage(CmdRpcError, msg.Ext(), []byte(fmt.Sprintf("invalid rpc method length %d, should be (1-127)", methodLen))))
 		return
 	}
 	method := string(data[(len(data) - 1 - methodLen):(len(data) - 1)])
 	handler, ok := engine.rpcMethodHandlers[method]
 	if !ok {
-		client.SendMsg(NewRpcMessage(CmdRpcError, msg.RpcSeq(), []byte(fmt.Sprintf("invalid rpc method %s", method))))
+		client.SendMsg(NewRpcMessage(CmdRpcError, msg.Ext(), []byte(fmt.Sprintf("invalid rpc method %s", method))))
 		return
 	}
 	// rawmsg := msg.(IMessage)
