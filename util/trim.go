@@ -29,3 +29,26 @@ func TrimComment(data []byte) []byte {
 	}
 	return ret
 }
+
+func FixJsonComma(data []byte) []byte {
+	if json.Valid(data) {
+		return data
+	}
+
+	tmp := make([]byte, len(data)-1)
+
+	for i, v := range data {
+		if v == ',' {
+			copy(tmp, data[:i])
+			copy(tmp[i:], data[i+1:])
+			if json.Valid(tmp) {
+				return tmp
+			}
+		}
+	}
+	return nil
+}
+
+func TrimJson(data []byte) []byte {
+	return FixJsonComma(TrimComment(data))
+}
