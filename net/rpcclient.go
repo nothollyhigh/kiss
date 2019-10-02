@@ -237,17 +237,17 @@ func (client *RpcClient) CallWithTimer(method string, req interface{}, rsp inter
 // 		case CmdRpcMethod:
 // 			rc := engine.rpcclients[c]
 // 			rc.Lock()
-// 			session, ok := rc.sessionMap[msg.RpcSeq()]
+// 			session, ok := rc.sessionMap[msg.Ext()]
 // 			rc.Unlock()
 // 			if ok {
 // 				session.done <- &RpcMessage{msg, nil}
 // 			} else {
-// 				log.Debug("no rpcsession waiting for rpc response seq: %v", msg.RpcSeq())
+// 				log.Debug("no rpcsession waiting for rpc response seq: %v", msg.Ext())
 // 			}
 // 		case CmdRpcError:
 // 			rc := engine.rpcclients[c]
 // 			rc.Lock()
-// 			session, ok := rc.sessionMap[msg.RpcSeq()]
+// 			session, ok := rc.sessionMap[msg.Ext()]
 // 			rc.Unlock()
 // 			if ok {
 // 				session.done <- &RpcMessage{msg, errors.New(string(msg.Body()))}
@@ -322,16 +322,16 @@ func NewRpcClient(addr string, engine *TcpEngin, codec ICodec, onConnected func(
 		case CmdPing2:
 		case CmdRpcMethod:
 			rpcclient.Lock()
-			session, ok := rpcclient.sessionMap[msg.RpcSeq()]
+			session, ok := rpcclient.sessionMap[msg.Ext()]
 			rpcclient.Unlock()
 			if ok {
 				session.done <- &RpcMessage{msg, nil}
 			} else {
-				log.Debug("no rpcsession waiting for rpc response seq: %v", msg.RpcSeq())
+				log.Debug("no rpcsession waiting for rpc response seq: %v", msg.Ext())
 			}
 		case CmdRpcError:
 			rpcclient.Lock()
-			session, ok := rpcclient.sessionMap[msg.RpcSeq()]
+			session, ok := rpcclient.sessionMap[msg.Ext()]
 			rpcclient.Unlock()
 			if ok {
 				session.done <- &RpcMessage{msg, errors.New(string(msg.Body()))}
