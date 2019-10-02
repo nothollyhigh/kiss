@@ -55,8 +55,6 @@ const (
 
 // message interface
 type IMessage interface {
-	// message header length
-	HeadLen() int
 	// message body length
 	BodyLen() int
 
@@ -66,24 +64,14 @@ type IMessage interface {
 	SetCmd(cmd uint32)
 
 	// message extension
-	Ext() uint64
+	Ext() int64
 	// setting message extension
-	SetExt(ext uint64)
-
-	// message rpc sequence
-	RpcSeq() int64
-	// setting message rpc sequence
-	SetRpcSeq(seq int64)
+	SetExt(ext int64)
 
 	// all message data
 	Data() []byte
 	// setting all message data
 	SetData(data []byte)
-
-	// all message raw data
-	RawData() []byte
-	// setting all message raw data
-	SetRawData(rawData []byte)
 
 	// message body
 	Body() []byte
@@ -102,11 +90,6 @@ type Message struct {
 	rawData []byte
 }
 
-// header length
-func (msg *Message) HeadLen() int {
-	return DEFAULT_MESSAGE_HEAD_LEN
-}
-
 // body length
 func (msg *Message) BodyLen() int {
 	return int(binary.LittleEndian.Uint32(msg.data[DEFAULT_BODY_LEN_IDX_BEGIN:DEFAULT_BODY_LEN_IDX_END]))
@@ -123,23 +106,13 @@ func (msg *Message) SetCmd(cmd uint32) {
 }
 
 // extension
-func (msg *Message) Ext() uint64 {
-	return binary.LittleEndian.Uint64(msg.data[DEFAULT_EXT_IDX_BEGIN:DEFAULT_EXT_IDX_END])
-}
-
-// setting extension
-func (msg *Message) SetExt(ext uint64) {
-	binary.LittleEndian.PutUint64(msg.data[DEFAULT_EXT_IDX_BEGIN:DEFAULT_EXT_IDX_END], ext)
-}
-
-// rpc sequence
-func (msg *Message) RpcSeq() int64 {
+func (msg *Message) Ext() int64 {
 	return int64(binary.LittleEndian.Uint64(msg.data[DEFAULT_EXT_IDX_BEGIN:DEFAULT_EXT_IDX_END]))
 }
 
-// setting rpc sequence
-func (msg *Message) SetRpcSeq(seq int64) {
-	binary.LittleEndian.PutUint64(msg.data[DEFAULT_EXT_IDX_BEGIN:DEFAULT_EXT_IDX_END], uint64(seq))
+// setting extension
+func (msg *Message) SetExt(ext int64) {
+	binary.LittleEndian.PutUint64(msg.data[DEFAULT_EXT_IDX_BEGIN:DEFAULT_EXT_IDX_END], uint64(ext))
 }
 
 // all data
@@ -150,16 +123,6 @@ func (msg *Message) Data() []byte {
 // setting all data
 func (msg *Message) SetData(data []byte) {
 	msg.data = data
-}
-
-// raw data
-func (msg *Message) RawData() []byte {
-	return msg.rawData
-}
-
-// setting raw data
-func (msg *Message) SetRawData(rawData []byte) {
-	msg.rawData = rawData
 }
 
 // body
