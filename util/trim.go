@@ -30,25 +30,43 @@ func TrimComment(data []byte) []byte {
 	return ret
 }
 
-func FixJsonComma(data []byte) []byte {
-	if json.Valid(data) {
-		return data
+func TrimJsonComma(data []byte, args ...interface{}) ([]byte, error) {
+	var (
+		e error
+		m interface{} = map[string]interface{}{}
+	)
+
+	if len(args) > 0 {
+		m = args[0]
 	}
 
-	tmp := make([]byte, len(data)-1)
-
-	for i, v := range data {
-		if v == ',' {
-			copy(tmp, data[:i])
-			copy(tmp[i:], data[i+1:])
-			if json.Valid(tmp) {
-				return tmp
+	if e = json.Unmarshal(data, &m); e != nil {
+		tmp := make([]byte, len(data)-1)
+		for i := len(data) - 1; i >= 0; i-- {
+			if data[i] == ',' {
+				copy(tmp, data[:i])
+				copy(tmp[i:], data[i+1:])
+				if e = json.Unmarshal(tmp, &m); e == nil {
+					return tmp, e
+				}
 			}
 		}
 	}
-	return nil
+
+	return data, e
 }
 
-func TrimJson(data []byte) []byte {
-	return FixJsonComma(TrimComment(data))
+func TrimJson(data []byte, args ...interface{}) ([]byte, error) {
+	var (
+		err error
+		ret []byte
+	)
+
+	if len(args) > 0 {
+		ret, err = TrimJsonComma(TrimComment(data), args[0])
+	} else {
+		ret, err = TrimJsonComma(TrimComment(data))
+	}
+
+	return ret, err
 }
