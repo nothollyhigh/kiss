@@ -55,33 +55,27 @@ type TcpEngin struct {
 	sockSendBlockTime time.Duration
 
 	// new connection handler
-	onNewConnHandler func(conn *net.TCPConn) error
+	OnNewConnHandler func(conn *net.TCPConn) error
 	// create tcp client handler
-	createClientHandler func(conn *net.TCPConn, parent *TcpEngin, cipher ICipher) *TcpClient
+	CreateClientHandler func(conn *net.TCPConn, parent *TcpEngin, cipher ICipher) *TcpClient
 	// new tcp client handler
-	onNewClientHandler func(client *TcpClient)
+	OnNewClientHandler func(client *TcpClient)
 	// new cipher handler
-	newCipherHandler func() ICipher
+	NewCipherHandler func() ICipher
 	// tcp client disconnected handler
-	onDisconnectedHandler func(client *TcpClient)
+	OnDisconnectedHandler func(client *TcpClient)
 	// tcp client send queue full handler
-	sendQueueFullHandler func(*TcpClient, interface{})
+	SendQueueFullHandler func(*TcpClient, interface{})
 	// tcp client receive handler
-	recvHandler func(client *TcpClient) IMessage
+	RecvHandler func(client *TcpClient) IMessage
 	// tcp client send handler
-	sendHandler func(client *TcpClient, data []byte) error
+	SendHandler func(client *TcpClient, data []byte) error
 	// tcp client message handler
-	onMsgHandler func(client *TcpClient, msg IMessage)
+	OnMsgHandler func(client *TcpClient, msg IMessage)
 }
 
 // on new connection
-func (engine *TcpEngin) OnNewConn(conn *net.TCPConn) error {
-	defer util.HandlePanic()
-
-	if engine.onNewConnHandler != nil {
-		return engine.onNewConnHandler(conn)
-	}
-
+func (engine *TcpEngin) DefaultNewConnHandler(conn *net.TCPConn) error {
 	var err error
 	if err = conn.SetNoDelay(engine.sockNoDelay); err != nil {
 		log.Debug("SetNoDelay Error: %v.", err)
@@ -121,76 +115,79 @@ ErrExit:
 	return err
 }
 
+// on new connection
+func (engine *TcpEngin) OnNewConn(conn *net.TCPConn) error {
+	defer util.HandlePanic()
+
+	if engine.OnNewConnHandler != nil {
+		return engine.OnNewConnHandler(conn)
+	}
+
+	return engine.DefaultNewConnHandler(conn)
+}
+
 // handle new connection
 func (engine *TcpEngin) HandleNewConn(onNewConn func(conn *net.TCPConn) error) {
-	engine.onNewConnHandler = onNewConn
+	engine.OnNewConnHandler = onNewConn
+}
+
+// create client
+func (engine *TcpEngin) DefaultCreateClientHandler(conn *net.TCPConn, parent *TcpEngin, cipher ICipher) *TcpClient {
+	return createTcpClient(conn, parent, cipher)
 }
 
 // create client
 func (engine *TcpEngin) CreateClient(conn *net.TCPConn, parent *TcpEngin, cipher ICipher) *TcpClient {
-	if engine.createClientHandler != nil {
-		return engine.createClientHandler(conn, parent, cipher)
+	if engine.CreateClientHandler != nil {
+		return engine.CreateClientHandler(conn, parent, cipher)
 	}
-	return createTcpClient(conn, parent, cipher)
+	return engine.DefaultCreateClientHandler(conn, parent, cipher)
 }
 
 // setting create tcp client handler
 func (engine *TcpEngin) HandleCreateClient(createClient func(conn *net.TCPConn, parent *TcpEngin, cipher ICipher) *TcpClient) {
-	engine.createClientHandler = createClient
+	engine.CreateClientHandler = createClient
 }
 
 // on new client
 func (engine *TcpEngin) OnNewClient(client *TcpClient) {
-	if engine.onNewClientHandler != nil {
-		engine.onNewClientHandler(client)
+	if engine.OnNewClientHandler != nil {
+		engine.OnNewClientHandler(client)
 	}
 }
 
 // setting new client handler
 func (engine *TcpEngin) HandleNewClient(onNewClient func(client *TcpClient)) {
-	engine.onNewClientHandler = onNewClient
+	engine.OnNewClientHandler = onNewClient
 }
 
 // new cipher
 func (engine *TcpEngin) NewCipher() ICipher {
-	if engine.newCipherHandler != nil {
-		return engine.newCipherHandler()
+	if engine.NewCipherHandler != nil {
+		return engine.NewCipherHandler()
 	}
 	return nil
 }
 
 // setting new cipher handler
 func (engine *TcpEngin) HandleNewCipher(newCipher func() ICipher) {
-	engine.newCipherHandler = newCipher
+	engine.NewCipherHandler = newCipher
 }
 
 // on disconnected
 func (engine *TcpEngin) OnDisconnected(client *TcpClient) {
-	if engine.onDisconnectedHandler != nil {
-		engine.onDisconnectedHandler(client)
+	if engine.OnDisconnectedHandler != nil {
+		engine.OnDisconnectedHandler(client)
 	}
 }
 
 // setting disconnected handler
 func (engine *TcpEngin) HandleDisconnected(onDisconnected func(client *TcpClient)) {
-	pre := engine.onDisconnectedHandler
-	engine.onDisconnectedHandler = func(c *TcpClient) {
-		defer util.HandlePanic()
-		if pre != nil {
-			pre(c)
-		}
-		onDisconnected(c)
-	}
+	engine.OnDisconnectedHandler = onDisconnected
 }
 
 // recv message
-func (engine *TcpEngin) RecvMsg(client *TcpClient) IMessage {
-	// defer util.HandlePanic()
-
-	if engine.recvHandler != nil {
-		return engine.recvHandler(client)
-	}
-
+func (engine *TcpEngin) DefaultRecvMsg(client *TcpClient) IMessage {
 	pkt := struct {
 		err     error
 		msg     *Message
@@ -246,30 +243,34 @@ Exit:
 	return nil
 }
 
+// recv message
+func (engine *TcpEngin) RecvMsg(client *TcpClient) IMessage {
+	if engine.RecvHandler != nil {
+		return engine.RecvHandler(client)
+	}
+
+	return engine.DefaultRecvMsg(client)
+}
+
 // setting receive message handler
 func (engine *TcpEngin) HandleRecv(recver func(client *TcpClient) IMessage) {
-	engine.recvHandler = recver
+	engine.RecvHandler = recver
 }
 
 // on tcp client send queue full
 func (engine *TcpEngin) OnSendQueueFull(client *TcpClient, msg interface{}) {
-	if engine.sendQueueFullHandler != nil {
-		engine.sendQueueFullHandler(client, msg)
+	if engine.SendQueueFullHandler != nil {
+		engine.SendQueueFullHandler(client, msg)
 	}
 }
 
 // setting tcp client send queue full handler
 func (engine *TcpEngin) HandleSendQueueFull(h func(*TcpClient, interface{})) {
-	engine.sendQueueFullHandler = h
+	engine.SendQueueFullHandler = h
 }
 
 // tcp client send data
-func (engine *TcpEngin) Send(client *TcpClient, data []byte) error {
-	defer util.HandlePanic()
-
-	if engine.sendHandler != nil {
-		return engine.sendHandler(client, data)
-	}
+func (engine *TcpEngin) DefaultSend(client *TcpClient, data []byte) error {
 	err := client.Conn.SetWriteDeadline(time.Now().Add(engine.sockSendBlockTime))
 	if err != nil {
 		log.Debug("%s Send SetReadDeadline Err: %v", client.Conn.RemoteAddr().String(), err)
@@ -291,30 +292,23 @@ func (engine *TcpEngin) Send(client *TcpClient, data []byte) error {
 	return nil
 }
 
-// setting tcp client send data handler
-func (engine *TcpEngin) HandleSend(sender func(client *TcpClient, data []byte) error) {
-	engine.sendHandler = sender
+// tcp client send data
+func (engine *TcpEngin) Send(client *TcpClient, data []byte) error {
+	defer util.HandlePanic()
+
+	if engine.SendHandler != nil {
+		return engine.SendHandler(client, data)
+	}
+
+	return engine.DefaultSend(client, data)
 }
 
-func (engine *TcpEngin) OnMessage(client *TcpClient, msg IMessage) {
-	if !engine.running {
-		// switch msg.Cmd() {
-		// case CmdPing:
-		// case CmdSetReaIp:
-		// case CmdRpcMethod:
-		// case CmdRpcError:
-		// default:
-		// 	log.Debug("engine is not running, ignore cmd %X, ip: %v", msg.Cmd(), client.Ip())
-		// 	return
-		// }
-		return
-	}
+// setting tcp client send data handler
+func (engine *TcpEngin) HandleSend(sender func(client *TcpClient, data []byte) error) {
+	engine.SendHandler = sender
+}
 
-	if engine.onMsgHandler != nil {
-		engine.onMsgHandler(client, msg)
-		return
-	}
-
+func (engine *TcpEngin) DefaultOnMessage(client *TcpClient, msg IMessage) {
 	cmd := msg.Cmd()
 	if cmd == CmdPing {
 		client.SendMsg(NewMessage(CmdPing2, nil))
@@ -334,9 +328,31 @@ func (engine *TcpEngin) OnMessage(client *TcpClient, msg IMessage) {
 	}
 }
 
+func (engine *TcpEngin) OnMessage(client *TcpClient, msg IMessage) {
+	if !engine.running {
+		// switch msg.Cmd() {
+		// case CmdPing:
+		// case CmdSetReaIp:
+		// case CmdRpcMethod:
+		// case CmdRpcError:
+		// default:
+		// 	log.Debug("engine is not running, ignore cmd %X, ip: %v", msg.Cmd(), client.Ip())
+		// 	return
+		// }
+		return
+	}
+
+	if engine.OnMsgHandler != nil {
+		engine.OnMsgHandler(client, msg)
+		return
+	}
+
+	engine.DefaultOnMessage(client, msg)
+}
+
 // setting message handler
 func (engine *TcpEngin) HandleMessage(onMsg func(client *TcpClient, msg IMessage)) {
-	engine.onMsgHandler = onMsg
+	engine.OnMsgHandler = onMsg
 }
 
 // handle message by cmd
