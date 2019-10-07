@@ -11,6 +11,7 @@ import (
 )
 
 var TIME_FOREVER = time.Duration(math.MaxInt64)
+var TIME_EXEC_BLOCK = time.Second * 60
 var DEFAULT_Q_SIZE = 1024 * 4
 
 type handler struct {
@@ -73,18 +74,21 @@ func (m *Module) Start() {
 
 	util.Go(func() {
 		defer m.Done()
+
+		running := m.running
+
 		for {
 			select {
 			case f := <-m.chFunc:
 				m.RLock()
-				running := m.running
+				running = m.running
 				m.RUnlock()
 				if running {
 					util.Safe(f)
 				}
 			case <-m.nextStateTimer.C:
 				m.RLock()
-				running := m.running
+				running = m.running
 				m.RUnlock()
 				if running {
 					if m.nextStateFunc != nil {
@@ -123,33 +127,45 @@ func (m *Module) Next(timeout time.Duration, f func()) {
 
 func (m *Module) After(timeout time.Duration, f func()) interface{} {
 	m.Lock()
-	defer m.Unlock()
+	running := m.running
+	m.Unlock()
 
 	var timerId interface{}
 
-	if m.running {
+	if running {
 		if !m.enableHeapTimer {
 			timerId = time.AfterFunc(timeout, func() {
 				m.push(func() {
+					m.Lock()
 					if _, ok := m.timers[timerId]; ok {
-						defer delete(m.timers, timerId)
+						delete(m.timers, timerId)
+						m.Unlock()
 						f()
+						return
 					}
+					m.Unlock()
 				})
 			})
 		} else {
 			timerId = m.heepTimer.AfterFunc(timeout, func() {
 				m.push(func() {
+					m.Lock()
 					if _, ok := m.timers[timerId]; ok {
-						defer delete(m.timers, timerId)
+						delete(m.timers, timerId)
+						m.Unlock()
 						f()
+						return
 					}
+					m.Unlock()
 				})
 			})
 		}
 
+		m.Lock()
 		m.timers[timerId] = util.Empty{}
+		m.Unlock()
 	}
+
 	return timerId
 }
 
@@ -193,32 +209,48 @@ func (m *Module) Stop() {
 			close(m.chStop)
 		}
 	})
+
 	m.Wait()
 }
 
 func (m *Module) push(f func(), args ...interface{}) error {
 	if len(args) > 0 {
-		if timeout, ok := args[0].(time.Duration); ok {
-			after := time.NewTimer(timeout)
-			defer after.Stop()
-			select {
-			case m.chFunc <- f:
-				return nil
-			case <-after.C:
-				return fmt.Errorf("timeout")
-			}
+		timeout, ok := args[0].(time.Duration)
+		if !ok {
+			timeout = TIME_EXEC_BLOCK
+		}
+
+		after := time.NewTimer(timeout)
+		defer after.Stop()
+		select {
+		case m.chFunc <- f:
+			return nil
+		case <-after.C:
+			return fmt.Errorf("timeout")
+		}
+
+	} else {
+		timeout := TIME_EXEC_BLOCK
+
+		after := time.NewTimer(timeout)
+		defer after.Stop()
+		select {
+		case m.chFunc <- f:
+			return nil
+		case <-after.C:
+			return fmt.Errorf("timeout")
 		}
 	}
-	m.chFunc <- f
 
 	return nil
 }
 
 func (m *Module) Exec(f func(), args ...interface{}) error {
 	m.Lock()
-	defer m.Unlock()
+	running := m.running
+	m.Unlock()
 
-	if m.running {
+	if running {
 		return m.push(f, args...)
 	}
 
