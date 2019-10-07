@@ -20,7 +20,11 @@ type handler struct {
 }
 
 type Module struct {
+	sync.RWMutex
 	sync.WaitGroup
+
+	running bool
+
 	qsize  int
 	chFunc chan func()
 	chStop chan struct{}
@@ -44,14 +48,23 @@ func (m *Module) Init() {
 }
 
 func (m *Module) Start() {
+	m.Lock()
+	defer m.Unlock()
+
+	if m.running {
+		return
+	}
+
 	m.Add(1)
 
 	if m.qsize <= 0 {
 		m.qsize = DEFAULT_Q_SIZE
 	}
 
+	m.running = true
+
 	m.chFunc = make(chan func(), m.qsize)
-	m.chStop = make(chan struct{})
+	m.chStop = make(chan struct{}, 1)
 
 	if m.nextStateTimer == nil {
 		m.nextStateTimer = time.NewTimer(TIME_FOREVER)
@@ -63,13 +76,23 @@ func (m *Module) Start() {
 		for {
 			select {
 			case f := <-m.chFunc:
-				util.Safe(f)
-			case <-m.nextStateTimer.C:
-				if m.nextStateFunc != nil {
-					m.nextStateTimer.Reset(TIME_FOREVER)
-					f := m.nextStateFunc
-					m.nextStateFunc = nil
+				m.RLock()
+				running := m.running
+				m.RUnlock()
+				if running {
 					util.Safe(f)
+				}
+			case <-m.nextStateTimer.C:
+				m.RLock()
+				running := m.running
+				m.RUnlock()
+				if running {
+					if m.nextStateFunc != nil {
+						m.nextStateTimer.Reset(TIME_FOREVER)
+						f := m.nextStateFunc
+						m.nextStateFunc = nil
+						util.Safe(f)
+					}
 				}
 			case <-m.chStop:
 				return
@@ -86,86 +109,90 @@ func (m *Module) EnableHeapTimer(enable bool) {
 	m.enableHeapTimer = enable
 }
 
-// func (m *Module) EnableTick(interval time.Duration, onTick func()) error {
-// 	if m.ticker != nil {
-// 		return fmt.Errorf("ticker already started")
-// 	}
-
-// 	m.ticker = time.NewTicker(interval)
-
-// 	util.Go(func() {
-// 		defer func() {
-// 			m.ticker.Stop()
-// 			m.ticker = nil
-// 		}()
-
-// 		for {
-// 			select {
-// 			case <-m.ticker.C:
-// 				m.push(onTick)
-// 			case <-m.chStop:
-// 				return
-// 			}
-// 		}
-// 	})
-
-// 	return nil
-// }
-
 func (m *Module) Next(timeout time.Duration, f func()) {
-	if m.nextStateTimer != nil {
-		m.nextStateTimer.Stop()
+	m.Lock()
+	defer m.Unlock()
+	if m.running {
+		if m.nextStateTimer != nil {
+			m.nextStateTimer.Stop()
+		}
+		m.nextStateTimer = time.NewTimer(timeout)
+		m.nextStateFunc = f
 	}
-	m.nextStateTimer = time.NewTimer(timeout)
-	m.nextStateFunc = f
 }
 
 func (m *Module) After(timeout time.Duration, f func()) interface{} {
+	m.Lock()
+	defer m.Unlock()
+
 	var timerId interface{}
-	if !m.enableHeapTimer {
-		timerId = time.AfterFunc(timeout, func() {
-			m.push(func() {
-				if _, ok := m.timers[timerId]; ok {
-					defer delete(m.timers, timerId)
-					f()
-				}
+
+	if m.running {
+		if !m.enableHeapTimer {
+			timerId = time.AfterFunc(timeout, func() {
+				m.push(func() {
+					if _, ok := m.timers[timerId]; ok {
+						defer delete(m.timers, timerId)
+						f()
+					}
+				})
 			})
-		})
-	} else {
-		timerId = m.heepTimer.AfterFunc(timeout, func() {
-			m.push(func() {
-				if _, ok := m.timers[timerId]; ok {
-					defer delete(m.timers, timerId)
-					f()
-				}
+		} else {
+			timerId = m.heepTimer.AfterFunc(timeout, func() {
+				m.push(func() {
+					if _, ok := m.timers[timerId]; ok {
+						defer delete(m.timers, timerId)
+						f()
+					}
+				})
 			})
-		})
+		}
+
+		m.timers[timerId] = util.Empty{}
 	}
-	m.timers[timerId] = util.Empty{}
 	return timerId
 }
 
 func (m *Module) Cancel(timerId interface{}) {
-	if _, ok := m.timers[timerId]; ok {
+	m.Lock()
+	_, ok := m.timers[timerId]
+	if ok {
 		defer delete(m.timers, timerId)
+	}
+	m.Unlock()
 
-		if !m.enableHeapTimer {
-			if t, ok := timerId.(*time.Timer); ok {
-				t.Stop()
-			}
-		} else {
-			if t, ok := timerId.(*timer.TimerItem); ok {
-				t.Cancel()
-			}
+	if !m.enableHeapTimer {
+		if t, ok := timerId.(*time.Timer); ok {
+			t.Stop()
+		}
+	} else {
+		if t, ok := timerId.(*timer.TimerItem); ok {
+			t.Cancel()
 		}
 	}
 }
 
 func (m *Module) Stop() {
-	close(m.chStop)
-	if m.enableHeapTimer {
-		m.heepTimer.Stop()
-	}
+	util.Go(func() {
+		m.Lock()
+		defer m.Unlock()
+
+		if m.running {
+			m.running = false
+
+			if m.enableHeapTimer {
+				m.heepTimer.Stop()
+			} else {
+				for t, _ := range m.timers {
+					if tm, ok := t.(*time.Timer); ok {
+						tm.Stop()
+					}
+				}
+			}
+
+			close(m.chStop)
+		}
+	})
 	m.Wait()
 }
 
@@ -183,9 +210,17 @@ func (m *Module) push(f func(), args ...interface{}) error {
 		}
 	}
 	m.chFunc <- f
+
 	return nil
 }
 
 func (m *Module) Exec(f func(), args ...interface{}) error {
-	return m.push(f, args...)
+	m.Lock()
+	defer m.Unlock()
+
+	if m.running {
+		return m.push(f, args...)
+	}
+
+	return fmt.Errorf("module stopped")
 }
