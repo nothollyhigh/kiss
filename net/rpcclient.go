@@ -47,7 +47,8 @@ func (client *RpcClient) callCmd(cmd uint32, data []byte) ([]byte, error) {
 			done: make(chan *RpcMessage, 1),
 		}
 		msg := NewRpcMessage(cmd, session.seq, data)
-		client.chSend <- asyncMessage{msg.data, nil}
+		// client.chSend <- asyncMessage{msg.data, nil}
+		client.chSend <- asyncMessage{msg.Encrypt(client.SendSeq(), client.SendKey(), client.cipher), nil}
 		client.sessionMap[session.seq] = session
 	} else {
 		client.Unlock()
@@ -81,7 +82,8 @@ func (client *RpcClient) callCmdWithTimeout(cmd uint32, data []byte, timeout tim
 	}
 	msg := NewRpcMessage(cmd, session.seq, data)
 	select {
-	case client.chSend <- asyncMessage{msg.data, nil}:
+	//case client.chSend <- asyncMessage{msg.data, nil}:
+	case client.chSend <- asyncMessage{msg.Encrypt(client.SendSeq(), client.SendKey(), client.cipher), nil}:
 		client.sessionMap[session.seq] = session
 	case <-after.C:
 		client.Unlock()
@@ -116,7 +118,8 @@ func (client *RpcClient) callCmdWithTimer(cmd uint32, data []byte, after *time.T
 	}
 	msg := NewRpcMessage(cmd, session.seq, data)
 	select {
-	case client.chSend <- asyncMessage{msg.data, nil}:
+	//case client.chSend <- asyncMessage{msg.data, nil}:
+	case client.chSend <- asyncMessage{msg.Encrypt(client.SendSeq(), client.SendKey(), client.cipher), nil}:
 		client.sessionMap[session.seq] = session
 	case <-after.C:
 		client.Unlock()
@@ -288,7 +291,12 @@ func NewRpcClient(addr string, engine *TcpEngin, codec ICodec, onConnected func(
 	var err error
 	rpcclient := &RpcClient{sessionMap: map[int64]*rpcsession{}, codec: codec}
 
-	rpcclient.TcpClient, err = newTcpClient(addr, engine, NewCipherGzip(DefaultThreshold), true, func(c *TcpClient) {
+	cipher := engine.NewCipher()
+	if cipher == nil {
+		cipher = NewCipherGzip(DefaultThreshold)
+	}
+
+	rpcclient.TcpClient, err = newTcpClient(addr, engine, cipher, true, func(c *TcpClient) {
 		if onConnected != nil {
 			onConnected(rpcclient)
 		}
