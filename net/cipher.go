@@ -34,9 +34,10 @@ func (cipher *CipherGzip) Encrypt(seq int64, key uint32, data []byte) []byte {
 		return data
 	}
 	body := util.GZipCompress(data[DEFAULT_MESSAGE_HEAD_LEN:])
-	newData := make([]byte, DEFAULT_MESSAGE_HEAD_LEN+len(body))
-	copy(newData[:DEFAULT_MESSAGE_HEAD_LEN], data[:DEFAULT_MESSAGE_HEAD_LEN])
-	copy(newData[DEFAULT_MESSAGE_HEAD_LEN:], body)
+	// newData := make([]byte, DEFAULT_MESSAGE_HEAD_LEN+len(body))
+	// copy(newData[:DEFAULT_MESSAGE_HEAD_LEN], data[:DEFAULT_MESSAGE_HEAD_LEN])
+	// copy(newData[DEFAULT_MESSAGE_HEAD_LEN:], body)
+	newData := append(data[:DEFAULT_MESSAGE_HEAD_LEN], body...)
 	cmd := binary.LittleEndian.Uint32(newData[DEFAULT_CMD_IDX_BEGIN:DEFAULT_CMD_IDX_END])
 	binary.LittleEndian.PutUint32(newData[DEFAULT_CMD_IDX_BEGIN:DEFAULT_CMD_IDX_END], cmd|CmdFlagMaskGzip)
 	binary.LittleEndian.PutUint32(newData[DEFAULT_BODY_LEN_IDX_BEGIN:DEFAULT_BODY_LEN_IDX_END], uint32(len(body)))
@@ -55,9 +56,10 @@ func (cipher *CipherGzip) Decrypt(seq int64, key uint32, data []byte) ([]byte, e
 	binary.LittleEndian.PutUint32(data[DEFAULT_CMD_IDX_BEGIN:DEFAULT_CMD_IDX_END], cmd&(^CmdFlagMaskGzip))
 	body, err := util.GZipUnCompress(data[DEFAULT_MESSAGE_HEAD_LEN:])
 	if err == nil {
-		newData := make([]byte, DEFAULT_MESSAGE_HEAD_LEN+len(body))
-		copy(newData, data[:DEFAULT_MESSAGE_HEAD_LEN])
-		copy(newData[DEFAULT_MESSAGE_HEAD_LEN:], body)
+		// newData := make([]byte, DEFAULT_MESSAGE_HEAD_LEN+len(body))
+		// copy(newData, data[:DEFAULT_MESSAGE_HEAD_LEN])
+		// copy(newData[DEFAULT_MESSAGE_HEAD_LEN:], body)
+		newData := append(data[:DEFAULT_MESSAGE_HEAD_LEN], body...)
 		binary.LittleEndian.PutUint32(newData[DEFAULT_BODY_LEN_IDX_BEGIN:DEFAULT_BODY_LEN_IDX_END], uint32(len(body)))
 		return newData, nil
 	}
