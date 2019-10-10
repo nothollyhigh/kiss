@@ -41,8 +41,10 @@ func (ctx *RpcContext) Method() string {
 
 // write data
 func (ctx *RpcContext) WriteData(data []byte) error {
-
-	return ctx.client.pushDataSync(NewRpcMessage(ctx.message.Cmd(), ctx.message.Ext(), data).data)
+	//case client.chSend <- asyncMessage{msg.Encrypt(client.SendSeq(), client.SendKey(), client.cipher), nil}:
+	msg := NewRpcMessage(ctx.message.Cmd(), ctx.message.Ext(), data)
+	data = msg.Encrypt(ctx.client.SendSeq(), ctx.client.SendKey(), ctx.client.cipher)
+	return ctx.client.pushDataSync(data)
 }
 
 // write message
@@ -50,7 +52,8 @@ func (ctx *RpcContext) WriteMsg(msg IMessage) error {
 	if ctx.message != msg {
 		msg.SetExt(ctx.message.Ext())
 	}
-	return ctx.client.pushDataSync(msg.Data())
+	data := msg.Encrypt(ctx.client.SendSeq(), ctx.client.SendKey(), ctx.client.cipher)
+	return ctx.client.pushDataSync(data)
 }
 
 // bind data
@@ -64,7 +67,9 @@ func (ctx *RpcContext) Write(v interface{}) error {
 	if err != nil {
 		return err
 	}
-	return ctx.client.pushDataSync(NewRpcMessage(ctx.message.Cmd(), ctx.message.Ext(), data).data)
+	msg := NewRpcMessage(ctx.message.Cmd(), ctx.message.Ext(), data)
+	data = msg.Encrypt(ctx.client.SendSeq(), ctx.client.SendKey(), ctx.client.cipher)
+	return ctx.client.pushDataSync(data)
 }
 
 // bind json
@@ -78,7 +83,9 @@ func (ctx *RpcContext) WriteJson(v interface{}) error {
 	if err != nil {
 		return err
 	}
-	return ctx.client.pushDataSync(NewRpcMessage(ctx.message.Cmd(), ctx.message.Ext(), data).data)
+	msg := NewRpcMessage(ctx.message.Cmd(), ctx.message.Ext(), data)
+	data = msg.Encrypt(ctx.client.SendSeq(), ctx.client.SendKey(), ctx.client.cipher)
+	return ctx.client.pushDataSync(data)
 }
 
 // bind gob data
@@ -93,7 +100,9 @@ func (ctx *RpcContext) WriteGob(v interface{}) error {
 	if err != nil {
 		return err
 	}
-	return ctx.client.pushDataSync(NewRpcMessage(ctx.message.Cmd(), ctx.message.Ext(), buffer.Bytes()).data)
+	msg := NewRpcMessage(ctx.message.Cmd(), ctx.message.Ext(), buffer.Bytes())
+	data := msg.Encrypt(ctx.client.SendSeq(), ctx.client.SendKey(), ctx.client.cipher)
+	return ctx.client.pushDataSync(data)
 }
 
 // bind msgpack data
@@ -107,7 +116,9 @@ func (ctx *RpcContext) WriteMsgpack(v interface{}) error {
 	if err != nil {
 		return err
 	}
-	return ctx.client.pushDataSync(NewRpcMessage(ctx.message.Cmd(), ctx.message.Ext(), data).data)
+	msg := NewRpcMessage(ctx.message.Cmd(), ctx.message.Ext(), data)
+	data = msg.Encrypt(ctx.client.SendSeq(), ctx.client.SendKey(), ctx.client.cipher)
+	return ctx.client.pushDataSync(data)
 }
 
 // bind protobuf data
@@ -121,10 +132,14 @@ func (ctx *RpcContext) WriteProtobuf(v proto.Message) error {
 	if err != nil {
 		return err
 	}
-	return ctx.client.pushDataSync(NewRpcMessage(ctx.message.Cmd(), ctx.message.Ext(), data).data)
+	msg := NewRpcMessage(ctx.message.Cmd(), ctx.message.Ext(), data)
+	data = msg.Encrypt(ctx.client.SendSeq(), ctx.client.SendKey(), ctx.client.cipher)
+	return ctx.client.pushDataSync(data)
 }
 
 // write error
-func (ctx *RpcContext) Error(errText string) {
-	ctx.client.pushDataSync(NewRpcMessage(CmdRpcError, ctx.message.Ext(), []byte(errText)).data)
+func (ctx *RpcContext) Error(errText string) error {
+	msg := NewRpcMessage(CmdRpcError, ctx.message.Ext(), []byte(errText))
+	data := msg.Encrypt(ctx.client.SendSeq(), ctx.client.SendKey(), ctx.client.cipher)
+	return ctx.client.pushDataSync(data)
 }
