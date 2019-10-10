@@ -166,13 +166,13 @@ func (msg *Message) Decrypt(seq int64, key uint32, cipher ICipher) ([]byte, erro
 // message factory
 func NewMessage(cmd uint32, data []byte) *Message {
 	msg := &Message{
-		data: make([]byte, len(data)+DEFAULT_MESSAGE_HEAD_LEN),
+		data: append(make([]byte, DEFAULT_MESSAGE_HEAD_LEN), data...),
 	}
 	binary.LittleEndian.PutUint32(msg.data[DEFAULT_CMD_IDX_BEGIN:DEFAULT_CMD_IDX_END], cmd)
 	binary.LittleEndian.PutUint32(msg.data[DEFAULT_BODY_LEN_IDX_BEGIN:DEFAULT_BODY_LEN_IDX_END], uint32(len(data)))
-	if len(data) > 0 {
-		copy(msg.data[DEFAULT_MESSAGE_HEAD_LEN:], data)
-	}
+	// if len(data) > 0 {
+	// 	copy(msg.data[DEFAULT_MESSAGE_HEAD_LEN:], data)
+	// }
 	return msg
 }
 
@@ -186,14 +186,14 @@ func RawMessage(data []byte) *Message {
 // rpc message factory
 func NewRpcMessage(cmd uint32, seq int64, data []byte) *Message {
 	msg := &Message{
-		data: make([]byte, len(data)+DEFAULT_MESSAGE_HEAD_LEN),
+		data: append(make([]byte, DEFAULT_MESSAGE_HEAD_LEN), data...),
 	}
 	binary.LittleEndian.PutUint32(msg.data[DEFAULT_CMD_IDX_BEGIN:DEFAULT_CMD_IDX_END], cmd)
 	binary.LittleEndian.PutUint64(msg.data[DEFAULT_EXT_IDX_BEGIN:DEFAULT_EXT_IDX_END], uint64(seq))
 	binary.LittleEndian.PutUint32(msg.data[DEFAULT_BODY_LEN_IDX_BEGIN:DEFAULT_BODY_LEN_IDX_END], uint32(len(data)))
-	if len(data) > 0 {
-		copy(msg.data[DEFAULT_MESSAGE_HEAD_LEN:], data)
-	}
+	// if len(data) > 0 {
+	// 	copy(msg.data[DEFAULT_MESSAGE_HEAD_LEN:], data)
+	// }
 	return msg
 }
 
