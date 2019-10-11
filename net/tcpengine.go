@@ -37,6 +37,8 @@ type TcpEngin struct {
 	sockKeepAlive bool
 	// tcp client bufio reader
 	sockBufioReaderEnabled bool
+	// multi set realip
+	enableMultiSetRealIp bool
 	// tcp client send queue size
 	sendQsize int
 	// tcp client receive buf length
