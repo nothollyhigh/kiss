@@ -27,12 +27,13 @@ type limiterMgr struct {
 	limters map[string]*limiter
 }
 
-func (m *limiterMgr) get(times int, period time.Duration, constant bool) *limiter {
+func (m *limiterMgr) get(times int, interval time.Duration, constant bool) *limiter {
 	_, file, line, _ := runtime.Caller(2)
 	key := fmt.Sprintf("%s%d", file, line)
 
 	m.Lock()
 	defer m.Unlock()
+
 	l, ok := m.limters[key]
 	if ok {
 		return l
@@ -42,10 +43,9 @@ func (m *limiterMgr) get(times int, period time.Duration, constant bool) *limite
 		buckets: make(chan empty, times),
 	}
 
-	interval := period
 	if constant {
 		l.buckets = make(chan empty, 1)
-		interval = period / time.Duration(times)
+		interval = interval / time.Duration(times)
 		m.trigger.Schedule(0, interval, 0, func() {
 			select {
 			case l.buckets <- empty{}:
@@ -70,6 +70,12 @@ func (m *limiterMgr) get(times int, period time.Duration, constant bool) *limite
 	return l
 }
 
-func Limit(times int, period time.Duration, constant bool) {
-	<-mgr.get(times, period, constant).buckets
+func Limit(times int, interval time.Duration, constant bool) {
+	if times < 1 {
+		panic(fmt.Errorf("rate.Limit failed: [invalid times arg: %v]", times))
+	}
+	if interval < 1 {
+		panic(fmt.Errorf("rate.Limit failed: [invalid interval arg: %v]", interval))
+	}
+	<-mgr.get(times, interval, constant).buckets
 }
