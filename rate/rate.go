@@ -39,9 +39,7 @@ func (m *limiterMgr) get(times int, interval time.Duration, constant bool) *limi
 		return l
 	}
 
-	l = &limiter{
-		buckets: make(chan empty, times),
-	}
+	l = &limiter{}
 
 	if constant {
 		l.buckets = make(chan empty, 1)
