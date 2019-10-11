@@ -49,5 +49,5 @@ var (
 	DefaultReadLimit int64 = 1024 * 1024
 
 	// default enable set real ip multi times
-	DefaultEnableMultiSetRealIp = true
+	DefaultEnableMultiSetRealIp = false
 )
