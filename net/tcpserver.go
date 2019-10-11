@@ -288,6 +288,7 @@ func NewTcpServer(tag string) *TcpServer {
 			sockRecvBlockTime:      DefaultSockRecvBlockTime,
 			sockSendBlockTime:      DefaultSockSendBlockTime,
 			sockKeepaliveTime:      DefaultSockKeepaliveTime,
+			enableMultiSetRealIp:   DefaultEnableMultiSetRealIp,
 		},
 		maxLoad: DefaultMaxOnline,
 		tag:     tag,
