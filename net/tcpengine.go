@@ -511,6 +511,16 @@ func (engine *TcpEngin) SetSockKeepaliveTime(keepaliveTime time.Duration) {
 	engine.sockKeepaliveTime = keepaliveTime
 }
 
+// setting multi set realip
+func (engine *TcpEngin) SetMultiSetRealIpEnabled(enable bool) {
+	engine.enableMultiSetRealIp = enable
+}
+
+// multi set realip
+func (engine *TcpEngin) MultiSetRealIpEnabled() bool {
+	return engine.enableMultiSetRealIp
+}
+
 // socket receive buf length
 func (engine *TcpEngin) SockRecvBufLen() int {
 	return engine.sockRecvBufLen
@@ -593,10 +603,11 @@ func (engine *TcpEngin) BroadCast(msg IMessage) {
 // tcp engine factory
 func NewTcpEngine() *TcpEngin {
 	engine := &TcpEngin{
-		clients:                map[*TcpClient]struct{}{},
-		handlers:               map[uint32]func(*TcpClient, IMessage){},
-		running:                true,
-		Codec:                  DefaultCodec,
+		clients:  map[*TcpClient]struct{}{},
+		handlers: map[uint32]func(*TcpClient, IMessage){},
+		running:  true,
+		Codec:    DefaultCodec,
+
 		sockNoDelay:            DefaultSockNodelay,
 		sockKeepAlive:          DefaultSockKeepalive,
 		sockBufioReaderEnabled: DefaultSockBufioReaderEnabled,
@@ -604,10 +615,10 @@ func NewTcpEngine() *TcpEngin {
 		sockRecvBufLen:         DefaultSockRecvBufLen,
 		sockSendBufLen:         DefaultSockSendBufLen,
 		sockMaxPackLen:         DefaultSockPackMaxLen,
-		sockLingerSeconds:      DefaultSockLingerSeconds,
 		sockRecvBlockTime:      DefaultSockRecvBlockTime,
 		sockSendBlockTime:      DefaultSockSendBlockTime,
 		sockKeepaliveTime:      DefaultSockKeepaliveTime,
+		enableMultiSetRealIp:   DefaultEnableMultiSetRealIp,
 	}
 
 	cipher := NewCipherGzip(DefaultThreshold)
