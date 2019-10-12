@@ -10,71 +10,79 @@ import (
 )
 
 var (
-	mgr = limiterMgr{
-		limters: map[string]*limiter{},
-		trigger: timer.New("kiss-limiter"),
+	defaultLimiter = &Limiter{
+		trigger:    timer.New("kiss-default-limiter"),
+		bucketsMap: map[string]chan empty{},
 	}
 )
 
 type empty struct{}
 
-type limiter struct {
-	buckets chan empty
-}
-
-type limiterMgr struct {
+type Limiter struct {
 	sync.RWMutex
-	trigger *timer.Timer
-	limters map[string]*limiter
+	trigger    *timer.Timer
+	bucketsMap map[string]chan empty
 }
 
-func (m *limiterMgr) get(times int, interval time.Duration, constant bool) *limiter {
+func (l *Limiter) get(times int, interval time.Duration, constant bool, tags ...interface{}) chan empty {
 	_, file, line, _ := runtime.Caller(2)
-	key := fmt.Sprintf("%s%d", file, line)
-
-	m.Lock()
-	defer m.Unlock()
-
-	l, ok := m.limters[key]
-	if ok {
-		return l
+	key := fmt.Sprintf("%s_%d", file, line)
+	for _, v := range tags {
+		key += fmt.Sprintf("_%v", v)
 	}
 
-	l = &limiter{}
+	l.Lock()
+	defer l.Unlock()
+
+	buckets, ok := l.bucketsMap[key]
+	if ok {
+		return buckets
+	}
 
 	if constant {
-		l.buckets = make(chan empty, 1)
+		buckets = make(chan empty, 1)
 		interval = interval / time.Duration(times)
-		m.trigger.Schedule(0, interval, 0, func() {
+		l.trigger.Schedule(0, interval, 0, func() {
 			select {
-			case l.buckets <- empty{}:
+			case buckets <- empty{}:
 			default:
 			}
 
 		})
 	} else {
-		l.buckets = make(chan empty, times)
-		m.trigger.Schedule(0, interval, 0, func() {
+		buckets = make(chan empty, times)
+		l.trigger.Schedule(0, interval, 0, func() {
 			for i := 0; i < times; i++ {
 				select {
-				case l.buckets <- empty{}:
+				case buckets <- empty{}:
 				default:
 				}
 			}
 		})
 	}
 
-	m.limters[key] = l
+	l.bucketsMap[key] = buckets
 
-	return l
+	return buckets
 }
 
-func Limit(times int, interval time.Duration, constant bool) {
+func (l *Limiter) Wait(times int, interval time.Duration, constant bool, tags ...interface{}) {
 	if times < 1 {
-		log.Panic("rate.Limit failed: [invalid times arg: %v]", times)
+		log.Panic("rate.Wait failed: [invalid times arg: %v]", times)
 	}
 	if interval < 1 {
-		log.Panic("rate.Limit failed: [invalid interval arg: %v]", interval)
+		log.Panic("rate.Wait failed: [invalid interval arg: %v]", interval)
 	}
-	<-mgr.get(times, interval, constant).buckets
+	<-l.get(times, interval, constant, tags...)
+}
+
+func New(tag string) *Limiter {
+	return &Limiter{
+		trigger:    timer.New(fmt.Sprintf("kiss-limiter-%v", tag)),
+		bucketsMap: map[string]chan empty{},
+	}
+}
+
+func Wait(times int, interval time.Duration, constant bool, tags ...interface{}) {
+	defaultLimiter.Wait(times, interval, constant, tags)
 }
