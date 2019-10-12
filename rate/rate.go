@@ -2,6 +2,7 @@ package rate
 
 import (
 	"fmt"
+	"github.com/nothollyhigh/kiss/log"
 	"github.com/nothollyhigh/kiss/timer"
 	"runtime"
 	"sync"
@@ -70,10 +71,10 @@ func (m *limiterMgr) get(times int, interval time.Duration, constant bool) *limi
 
 func Limit(times int, interval time.Duration, constant bool) {
 	if times < 1 {
-		panic(fmt.Errorf("rate.Limit failed: [invalid times arg: %v]", times))
+		log.Panic("rate.Limit failed: [invalid times arg: %v]", times)
 	}
 	if interval < 1 {
-		panic(fmt.Errorf("rate.Limit failed: [invalid interval arg: %v]", interval))
+		log.Panic("rate.Limit failed: [invalid interval arg: %v]", interval)
 	}
 	<-mgr.get(times, interval, constant).buckets
 }
