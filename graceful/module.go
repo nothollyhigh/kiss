@@ -2,6 +2,7 @@ package graceful
 
 import (
 	"fmt"
+	"github.com/nothollyhigh/kiss/log"
 	"github.com/nothollyhigh/kiss/net"
 	"github.com/nothollyhigh/kiss/timer"
 	"github.com/nothollyhigh/kiss/util"
@@ -13,6 +14,8 @@ import (
 var TIME_FOREVER = time.Duration(math.MaxInt64)
 var TIME_EXEC_BLOCK = time.Second * 60
 var DEFAULT_Q_SIZE = 1024 * 4
+var ERR_MODULE_PUSH_TIMEOUT = fmt.Errorf("push timeout")
+var ERR_MODULE_STOPPED = fmt.Errorf("stopped")
 
 type handler struct {
 	cli *net.TcpClient
@@ -135,7 +138,7 @@ func (m *Module) After(timeout time.Duration, f func()) interface{} {
 	if running {
 		if !m.enableHeapTimer {
 			timerId = time.AfterFunc(timeout, func() {
-				m.push(func() {
+				err := m.push(func() {
 					m.Lock()
 					if _, ok := m.timers[timerId]; ok {
 						delete(m.timers, timerId)
@@ -145,10 +148,13 @@ func (m *Module) After(timeout time.Duration, f func()) interface{} {
 					}
 					m.Unlock()
 				})
+				if err != nil {
+					log.Error("[Module %p] After failed: %v", m, err)
+				}
 			})
 		} else {
 			timerId = m.heepTimer.AfterFunc(timeout, func() {
-				m.push(func() {
+				err := m.push(func() {
 					m.Lock()
 					if _, ok := m.timers[timerId]; ok {
 						delete(m.timers, timerId)
@@ -158,6 +164,9 @@ func (m *Module) After(timeout time.Duration, f func()) interface{} {
 					}
 					m.Unlock()
 				})
+				if err != nil {
+					log.Error("[Module %p] After failed: %v", m, err)
+				}
 			})
 		}
 
@@ -226,7 +235,7 @@ func (m *Module) push(f func(), args ...interface{}) error {
 		case m.chFunc <- f:
 			return nil
 		case <-after.C:
-			return fmt.Errorf("timeout")
+			return ERR_MODULE_PUSH_TIMEOUT
 		}
 
 	} else {
@@ -238,7 +247,7 @@ func (m *Module) push(f func(), args ...interface{}) error {
 		case m.chFunc <- f:
 			return nil
 		case <-after.C:
-			return fmt.Errorf("timeout")
+			return ERR_MODULE_PUSH_TIMEOUT
 		}
 	}
 
@@ -254,5 +263,5 @@ func (m *Module) Exec(f func(), args ...interface{}) error {
 		return m.push(f, args...)
 	}
 
-	return fmt.Errorf("module stopped")
+	return ERR_MODULE_STOPPED
 }
