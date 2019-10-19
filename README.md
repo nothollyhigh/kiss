@@ -92,7 +92,15 @@
 
 - 详见 [event](https://github.com/nothollyhigh/kiss/blob/master/event/README.md)
 
-### 六、[util，杂货铺](https://github.com/nothollyhigh/kiss/blob/master/util/README.md)
+### 六、[graceful](https://github.com/nothollyhigh/kiss/blob/master/graceful/README.md)
+
+- 优雅管理子模块的包，方便封装不同功能模块，每个模块一个逻辑协程，调用模块的Exec来串行化逻辑操作以避免加锁
+
+- graceful.Register可注册多个模块，实现相应接口，并由graceful自动管理启动和优雅退出等
+
+- 详见 [graceful](https://github.com/nothollyhigh/kiss/blob/master/graceful/README.md)
+
+### 七、[util，杂货铺](https://github.com/nothollyhigh/kiss/blob/master/util/README.md)
 
 - 最常用的 Go，HandlePanic，Safe，处理panic，打印异常调用栈信息
 
