@@ -9,7 +9,6 @@ import (
 type Qps struct {
 	Tag   string
 	Born  time.Time
-	Start time.Time
 	Count int64
 	Total int64
 
@@ -32,7 +31,6 @@ func (q *Qps) Run(args ...interface{}) *Qps {
 	Go(func() {
 		q.ticker = time.NewTicker(interval)
 		for {
-			q.Start = time.Now()
 			if _, ok := <-q.ticker.C; !ok {
 				log.Info("[qps %v] over", q.Tag)
 				return
