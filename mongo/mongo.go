@@ -2,9 +2,12 @@ package mongo
 
 import (
 	"errors"
+	"fmt"
 	"github.com/nothollyhigh/kiss/log"
 	"github.com/nothollyhigh/kiss/util"
 	"gopkg.in/mgo.v2"
+	"sort"
+	"strings"
 	"time"
 )
 
@@ -17,6 +20,7 @@ const (
 )
 
 type Config struct {
+	ID                string    `json:"ID"`
 	Addrs             []string  `json:"Addrs"`
 	Username          string    `json:"Username"`
 	Password          string    `json:"Password"`
@@ -194,4 +198,61 @@ func New(conf Config) *Mongo {
 	log.Info("mongo.New(pool size: %d) Connect To Mongo Success", len(mongo.sessions))
 
 	return mongo
+}
+
+type MgrConfig map[string][]Config
+
+type MongoMgr struct {
+	instances map[string][]*Mongo
+}
+
+func (mgr *MongoMgr) Get(tag string, args ...interface{}) *Mongo {
+	pool, ok := mgr.instances[tag]
+	if !ok {
+		return nil
+	}
+	idx := uint64(0)
+	if len(args) > 0 {
+		if i, ok := args[0].(int); ok {
+			idx = uint64(i)
+		} else {
+			idx = util.Hash(fmt.Sprintf("%v", args[0]))
+		}
+	}
+	return pool[uint32(idx)%uint32(len(pool))]
+}
+
+func (mgr *MongoMgr) ForEach(cb func(string, int, *Mongo)) {
+	for tag, pool := range mgr.instances {
+		for idx, m := range pool {
+			cb(tag, idx, m)
+		}
+	}
+}
+
+func NewMgr(mgrConf MgrConfig) *MongoMgr {
+	mgr := &MongoMgr{
+		instances: map[string][]*Mongo{},
+	}
+
+	for tagstr, confs := range mgrConf {
+		total := 0
+		sort.Slice(confs, func(i, j int) bool {
+			return confs[i].ID > confs[j].ID
+		})
+		for _, conf := range confs {
+			instance := New(conf)
+			tags := strings.Split(tagstr, ":")
+			for _, tag := range tags {
+				mgr.instances[tag] = append(mgr.instances[tag], instance)
+			}
+			total++
+		}
+
+		if total == 0 {
+			panic("invalid MgrConfig, 0 config")
+		}
+	}
+
+	return mgr
 }
