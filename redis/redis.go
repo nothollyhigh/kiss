@@ -254,20 +254,25 @@ func NewMgr(mgrConf MgrConfig) *RedisMgr {
 		instances: map[string][]*Redis{},
 	}
 
-	total := 0
-	for tag, confs := range mgrConf {
+	for tagstr, confs := range mgrConf {
 		sort.Slice(confs, func(i, j int) bool {
 			return confs[i].ID > confs[j].ID
 		})
+
+		total := 0
+
 		for _, conf := range confs {
-			mgr.instances[tag] = append(mgr.instances[tag], New(conf))
+			instance := New(conf)
+			tags := strings.Split(tagstr, ":")
+			for _, tag := range tags {
+				mgr.instances[tag] = append(mgr.instances[tag], instance)
+			}
 			total++
 		}
 
-	}
-
-	if total == 0 {
-		panic("invalid MgrConfig, 0 config")
+		if total == 0 {
+			panic("invalid MgrConfig, 0 config")
+		}
 	}
 
 	return mgr
