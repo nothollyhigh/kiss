@@ -8,6 +8,7 @@ import (
 	"github.com/nothollyhigh/kiss/log"
 	"github.com/nothollyhigh/kiss/util"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -123,20 +124,23 @@ func NewMgr(mgrConf MgrConfig) *MysqlMgr {
 		instances: map[string][]*Mysql{},
 	}
 
-	total := 0
-	for tag, confs := range mgrConf {
+	for tagstr, confs := range mgrConf {
+		total := 0
 		sort.Slice(confs, func(i, j int) bool {
 			return confs[i].ID > confs[j].ID
 		})
 		for _, conf := range confs {
-			mgr.instances[tag] = append(mgr.instances[tag], New(conf))
+			instance := New(conf)
+			tags := strings.Split(tagstr, ":")
+			for _, tag := range tags {
+				mgr.instances[tag] = append(mgr.instances[tag], instance)
+			}
 			total++
 		}
 
-	}
-
-	if total == 0 {
-		panic("invalid MgrConfig, 0 config")
+		if total == 0 {
+			panic("invalid MgrConfig, 0 config")
+		}
 	}
 
 	return mgr
