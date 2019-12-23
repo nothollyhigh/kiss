@@ -200,7 +200,10 @@ func New(conf Config) *Mongo {
 	return mongo
 }
 
-type MgrConfig map[string][]Config
+type MgrConfig map[string]struct {
+	Tags      []string
+	Shardings []Config
+}
 
 type MongoMgr struct {
 	instances map[string][]*Mongo
@@ -235,18 +238,26 @@ func NewMgr(mgrConf MgrConfig) *MongoMgr {
 		instances: map[string][]*Mongo{},
 	}
 
-	for tagstr, confs := range mgrConf {
+	for tagstr, conf := range mgrConf {
 		total := 0
-		sort.Slice(confs, func(i, j int) bool {
-			return confs[i].ID > confs[j].ID
+		sort.Slice(conf.Shardings, func(i, j int) bool {
+			return conf.Shardings[i].ID > conf.Shardings[j].ID
 		})
-		for _, conf := range confs {
-			instance := New(conf)
+		var instance *Mongo
+		var instances []*Mongo
+		for _, shardingConf := range conf.Shardings {
+			instance = New(shardingConf)
 			tags := strings.Split(tagstr, ":")
 			for _, tag := range tags {
 				mgr.instances[tag] = append(mgr.instances[tag], instance)
 			}
+			instances = append(instances, instance)
 			total++
+		}
+		if len(instances) > 0 {
+			for _, tag := range conf.Tags {
+				mgr.instances[tag] = instances
+			}
 		}
 
 		if total == 0 {
