@@ -394,9 +394,8 @@ func (w *FileWriter) Init(now time.Time) {
 
 		if !w.SaveEach { // && w.EnableBufio {
 			go func() {
-				defer func() {
-					recover()
-				}()
+				defer handlePanic()
+
 				if w.SyncInterval <= 0 {
 					w.SyncInterval = time.Second * 5
 				}
@@ -415,14 +414,11 @@ func (w *FileWriter) Init(now time.Time) {
 
 // flush
 func (w *FileWriter) save() {
-	if w.EnableBufio {
-		if w.filewriter != nil {
-			w.filewriter.Flush()
-		}
-	} else {
-		if w.logfile != nil {
-			w.logfile.Sync()
-		}
+	if w.EnableBufio && w.filewriter != nil {
+		w.filewriter.Flush()
+	}
+	if w.logfile != nil {
+		w.logfile.Sync()
 	}
 }
 
