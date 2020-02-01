@@ -120,10 +120,7 @@ func (m *Module) Next(timeout time.Duration, f func()) {
 	m.Lock()
 	defer m.Unlock()
 	if m.running {
-		if m.nextStateTimer != nil {
-			m.nextStateTimer.Stop()
-		}
-		m.nextStateTimer = time.NewTimer(timeout)
+		m.nextStateTimer.Reset(timeout)
 		m.nextStateFunc = f
 	}
 }
