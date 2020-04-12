@@ -97,8 +97,62 @@ func main() {
 }
 ```
 
+#### 三、zap文件切割等
+```golang
+package main
 
-#### 三、自定义日志处理
+import (
+	klog "github.com/nothollyhigh/kiss/log"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"os"
+	"time"
+)
+
+func main() {
+	url := "www.sample.com"
+
+	{
+		w := &klog.FileWriter{
+			RootDir:     "./logs/",      //日志根目录
+			DirFormat:   "20060102/",    //日志根目录下按天分割子目录
+			FileFormat:  "20060102.log", //日志文件命名规则，按天切割文件
+			MaxFileSize: 0,              //单个日志文件最大size，0则不限制size
+			EnableBufio: false,          //是否开启bufio
+		}
+
+		conf := zap.NewProductionEncoderConfig()
+		conf.EncodeTime = zapcore.ISO8601TimeEncoder
+		// conf.EncodeTime = zapcore.EpochMillisTimeEncoder
+		// conf.EncodeTime = zapcore.RFC3339TimeEncoder
+		// conf.EncodeTime = zapcore.RFC3339NanoTimeEncoder
+		core := zapcore.NewCore(
+			zapcore.NewConsoleEncoder(conf),
+			// zapcore.NewJSONEncoder(conf),
+			zapcore.NewMultiWriteSyncer(w, os.Stdout),
+			zap.DebugLevel,
+		)
+		logger := zap.New(core)
+		defer logger.Sync() // flushes buffer, if any
+		// if zapAdapter.Caller {
+		// 	zapAdapter.logger = zapAdapter.logger.WithOptions(zap.AddCaller(), zap.AddCallerSkip(2))
+		// }
+
+		sugar := logger.Sugar()
+		for i := 0; i < 5; i++ {
+			sugar.Infow("failed to fetch URL",
+				// Structured context as loosely typed key-value pairs.
+				"url", url,
+				"attempt", i,
+				"backoff", time.Second,
+			)
+			sugar.Info("test ", " cnt: ", i)
+		}
+	}
+}
+```
+
+#### 四、自定义日志处理
 
 ```golang
 package main
@@ -165,3 +219,4 @@ func main() {
 	}
 }
 ```
+
