@@ -9,6 +9,7 @@ import (
 type Qps struct {
 	Tag   string
 	Born  time.Time
+	Begin time.Time
 	Count int64
 	Total int64
 
@@ -21,6 +22,8 @@ func (q *Qps) Add(n int64) {
 }
 
 func (q *Qps) Run(args ...interface{}) *Qps {
+	q.Begin = time.Now()
+
 	interval := time.Second
 	if len(args) > 0 {
 		if i, ok := args[0].(int); ok {
@@ -28,7 +31,7 @@ func (q *Qps) Run(args ...interface{}) *Qps {
 		}
 	}
 
-	Go(func() {
+	Safe(func() {
 		q.ticker = time.NewTicker(interval)
 		for {
 			if _, ok := <-q.ticker.C; !ok {
@@ -37,7 +40,7 @@ func (q *Qps) Run(args ...interface{}) *Qps {
 			}
 			total := atomic.LoadInt64(&q.Total)
 			log.Info("[qps %v]: %v / s | avg: %v / s | total: %v for %v s",
-				q.Tag, atomic.SwapInt64(&q.Count, 0)/int64(interval/time.Second), int64(float64(total)/time.Since(q.Born).Seconds()), total, int64(time.Since(q.Born).Seconds()))
+				q.Tag, atomic.SwapInt64(&q.Count, 0)/int64(interval/time.Second), int64(float64(total)/time.Since(q.Begin).Seconds()), total, int64(time.Since(q.Begin).Seconds()))
 		}
 	})
 
