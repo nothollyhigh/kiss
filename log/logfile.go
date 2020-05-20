@@ -37,6 +37,10 @@ type FileWriter struct {
 	Formater func(log *Log) string
 }
 
+func (w *FileWriter) Sync() error {
+	return nil
+}
+
 // io.Writer implementation
 func (w *FileWriter) Write(p []byte) (n int, err error) {
 	w.Lock()
