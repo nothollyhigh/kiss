@@ -15,7 +15,39 @@ type ConfigLoader struct {
 	updateTasks    map[string]func()
 }
 
-func (loader *ConfigLoader) Add(configKey string, configFieled string, onUpdate func(string, string) error) {
+func (loader *ConfigLoader) Add(configKey string, configFieled string, onUpdate func() error) {
+	loader.Lock()
+	defer loader.Unlock()
+
+	var timer *time.Timer
+
+	if loader.updateInterval > 0 {
+		timer = time.NewTimer(loader.updateInterval)
+	}
+
+	update := func() { Safe(func() { onUpdate() }) }
+	loader.updateTasks[configKey+":"+configFieled] = update
+
+	if loader.updateInterval > 0 {
+		Go(func() {
+			for {
+				select {
+				case _, ok := <-timer.C:
+					if !ok {
+						return
+					}
+					update()
+				}
+			}
+		})
+	}
+
+	log.Info("ConfigLoader, Add Item, configKey: %v, configFieled: %v", configKey, configFieled)
+
+	update()
+}
+
+func (loader *ConfigLoader) AddAuto(configKey string, configFieled string, onUpdate func(string, string) error) {
 	loader.Lock()
 	defer loader.Unlock()
 
