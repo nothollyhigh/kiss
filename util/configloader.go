@@ -109,7 +109,7 @@ func NewConfigLoader(redisCli *redis.Client, pubsubKey string, updateInterval ti
 // 	autoUpdateInterval := time.Second * 15
 
 // 	// 注意: 发布订阅会独占一个redis连接
-// 	loader := util.NewConfigLoader(yabo.RedisCommon, ConfigUpdatePubsubKey, autoUpdateInterval)
+// 	loader := util.NewConfigLoader(redisCli, ConfigUpdatePubsubKey, autoUpdateInterval)
 
 // 	loader.Add(ConfigUpdateKey, ConfigUpdateFieled, onConfigUpdate)
 // }
